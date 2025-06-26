@@ -1,0 +1,51 @@
+### Variables globales
+@baseUrl = http://localhost:8080
+@token = {{loginAdmin.response.body.token}}
+
+### Login como admin para obtener token
+# @name loginAdmin
+POST {{baseUrl}}/api/sessions/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "adminpass123"
+}
+
+### Obtener todos los productos
+GET {{baseUrl}}/api/products
+
+### Obtener todos los productos (con paginación y filtros)
+GET {{baseUrl}}/api/products?page=1&limit=5&category=electrónica&sort=price:desc
+
+### Obtener un producto por ID
+GET {{baseUrl}}/api/products/{{productId}}
+
+### Crear un producto (requiere autenticación como admin)
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Producto de prueba",
+  "description": "Este es un producto de prueba",
+  "price": 1000,
+  "stock": 10,
+  "category": "electrónica",
+  "image": "https://via.placeholder.com/150"
+}
+
+### Actualizar un producto (requiere autenticación como admin)
+PUT {{baseUrl}}/api/products/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "price": 1200,
+  "stock": 15,
+  "description": "Descripción actualizada del producto"
+}
+
+### Eliminar un producto (requiere autenticación como admin)
+DELETE {{baseUrl}}/api/products/{{productId}}
+Authorization: Bearer {{token}}

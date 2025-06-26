@@ -1,0 +1,72 @@
+### Variables globales
+@baseUrl = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2NDJiNTA4NzJhMTYwNGU0NWM5MCIsImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc1MDg4NTY3NywiZXhwIjoxNzUwOTcyMDc3fQ.8VmSZdAZbB9HWmSoNvVL-1JaqVdQ68Rg0y4NguJghMc
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2N2Q2NzYwOGZkMTJjN2EyYzBlZSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA4ODYzNTgsImV4cCI6MTc1MDk3Mjc1OH0.GmdISTzIkPX2-JqFKbizPm3vsE3AbomWbCOYTIfusjM
+
+@userId = 685c671e7608fd12c7a2c0df
+
+### Create admin user
+POST {{baseUrl}}/api/sessions/admin
+Content-Type: application/json
+
+{
+  "first_name": "Admin",
+  "last_name": "User",
+  "email": "admin@example.com",
+  "age": 35,
+  "password": "adminpass123"
+}
+
+# @name createAdmin
+
+### Register new user
+POST {{baseUrl}}/api/sessions/register
+Content-Type: application/json
+
+{
+  "first_name": "Martin",
+  "last_name": "Doe",
+  "email": "martin.doe@example.com",
+  "age": 30,
+  "password": "password123"
+}
+
+### Login
+POST {{baseUrl}}/api/sessions/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "email": "k",
+  "password": "adminpass123"
+}
+# @name login
+# Guarda la respuesta del login para extraer el token más adelante
+
+### Get current user profile
+# Usa el token de la respuesta del login
+# @token {{login.response.body.token}}
+GET {{baseUrl}}/api/sessions/current HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Get all users (admin only)
+GET {{baseUrl}}/api/users HTTP/1.1
+Authorization: Bearer {{adminToken}}
+
+### Get user by ID
+GET {{baseUrl}}/api/users/{{userId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Update user
+PUT {{baseUrl}}/api/users/{{userId}} HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "first_name": "John",
+  "last_name": "Smith",
+  "age": 31
+}
+
+### Delete user (admin only)
+DELETE http://localhost:8080/api/users/{{userId}}
+Authorization: Bearer {{adminToken}}

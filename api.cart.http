@@ -1,0 +1,31 @@
+### Crear un carrito
+POST http://localhost:8080/api/cart
+
+### Obtener un carrito por ID
+GET http://localhost:8080/api/cart/{{cartId}}
+
+### Agregar producto al carrito
+POST http://localhost:8080/api/cart/{{cartId}}/products/{{productId}}
+Content-Type: application/json
+
+{
+  "quantity": 1
+}
+
+### Actualizar cantidad de un producto en el carrito
+PUT http://localhost:8080/api/cart/{{cartId}}/products/{{productId}}
+Content-Type: application/json
+
+{
+  "quantity": 3
+}
+
+### Eliminar un producto del carrito
+DELETE http://localhost:8080/api/cart/{{cartId}}/products/{{productId}}
+
+### Vaciar un carrito
+DELETE http://localhost:8080/api/cart/{{cartId}}
+
+### Finalizar compra
+POST http://localhost:8080/api/cart/{{cartId}}/purchase
+Authorization: Bearer {{token}}
