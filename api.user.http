@@ -36,8 +36,8 @@ POST {{baseUrl}}/api/sessions/login HTTP/1.1
 Content-Type: application/json
 
 {
-  "email": "k",
-  "password": "adminpass123"
+  "email": "madezdev@gmail.com",
+  "password": "Pepe@1234"
 }
 # @name login
 # Guarda la respuesta del login para extraer el token más adelante

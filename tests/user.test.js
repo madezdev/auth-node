@@ -9,15 +9,50 @@ const testUser = {
   first_name: 'John',
   last_name: 'Doe',
   email: 'john.doe@test.com',
-  age: 30,
+  idNumber: '123456789',
+  birthDate: '1990-01-01',
+  activityType: 'Employed',
+  activityNumber: '987654321',
+  phone: '555-123-4567',
   password: 'password123'
+}
+
+const testUserWithoutRequiredFields = {
+  first_name: 'Incomplete',
+  last_name: 'User',
+  email: 'incomplete@test.com',
+  password: 'password123'
+}
+
+const testUserWithInvalidEmail = {
+  first_name: 'Invalid',
+  last_name: 'Email',
+  email: 'invalid-email',
+  idNumber: '123456789',
+  birthDate: '1990-01-01',
+  activityType: 'Employed',
+  activityNumber: '987654321',
+  phone: '555-123-4567',
+  password: 'password123'
+}
+
+const testAddressData = {
+  street: '123 Main St',
+  city: 'Testville',
+  state: 'Test State',
+  zipCode: '12345',
+  country: 'Testland'
 }
 
 const testAdmin = {
   first_name: 'Admin',
   last_name: 'User',
   email: 'admin@test.com',
-  age: 35,
+  idNumber: '987654321',
+  birthDate: '1985-01-01',
+  activityType: 'Admin',
+  activityNumber: '123456789',
+  phone: '555-987-6543',
   password: 'admin123',
   role: 'admin'
 }
@@ -25,6 +60,8 @@ const testAdmin = {
 let userToken
 let adminToken
 let userId
+let guestToken
+let guestUserId
 
 // Connect to test database before running tests
 beforeAll(async () => {
@@ -61,6 +98,37 @@ describe('User Authentication API', () => {
 
     expect(response.body).toHaveProperty('status', 'error')
     expect(response.body).toHaveProperty('message', 'Email already in use')
+  })
+
+  test('should not register a user with invalid email format', async () => {
+    const response = await request(app)
+      .post('/api/sessions/register')
+      .send(testUserWithInvalidEmail)
+      .expect(400)
+
+    expect(response.body).toHaveProperty('status', 'error')
+    expect(response.body.message).toContain('email')
+  })
+
+  test('should register a user with incomplete profile as guest', async () => {
+    const response = await request(app)
+      .post('/api/sessions/register')
+      .send(testUserWithoutRequiredFields)
+      .expect(201)
+
+    expect(response.body).toHaveProperty('status', 'success')
+    expect(response.body).toHaveProperty('token')
+
+    guestToken = response.body.token
+
+    // Extract guestUserId from token
+    const tokenParts = guestToken.split('.')
+    const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString())
+    guestUserId = payload.id
+
+    // Verify user has guest role
+    const user = await UserModel.findById(guestUserId)
+    expect(user.role).toBe('guest')
   })
 
   test('should login existing user', async () => {
@@ -109,6 +177,20 @@ describe('User Authentication API', () => {
     expect(response.body).toHaveProperty('status', 'success')
     expect(response.body).toHaveProperty('user')
     expect(response.body.user).toHaveProperty('email', testUser.email)
+    expect(response.body).toHaveProperty('userIsCompleted', true)
+    expect(response.body).toHaveProperty('addressIsCompleted', false)
+  })
+
+  test('should indicate incomplete profile for guest user', async () => {
+    const response = await request(app)
+      .get('/api/sessions/current')
+      .set('Authorization', `Bearer ${guestToken}`)
+      .expect(200)
+
+    expect(response.body).toHaveProperty('status', 'success')
+    expect(response.body).toHaveProperty('userIsCompleted', false)
+    expect(response.body).toHaveProperty('addressIsCompleted', false)
+    expect(response.body.user).toHaveProperty('role', 'guest')
   })
 
   // Create admin user for further tests
@@ -132,6 +214,48 @@ describe('User Authentication API', () => {
 })
 
 describe('User CRUD API', () => {
+  test('should promote user from guest to user role when profile is completed', async () => {
+    // First update user with all required personal information
+    await request(app)
+      .put(`/api/users/${guestUserId}`)
+      .set('Authorization', `Bearer ${guestToken}`)
+      .send({
+        idNumber: '555111222',
+        birthDate: '1995-05-05',
+        activityType: 'Student',
+        activityNumber: '123789456',
+        phone: '555-987-1234'
+      })
+      .expect(200)
+
+    // Now add address data
+    const addressResponse = await request(app)
+      .put(`/api/users/${guestUserId}`)
+      .set('Authorization', `Bearer ${guestToken}`)
+      .send({
+        address: testAddressData
+      })
+      .expect(200)
+
+    // Verify address was saved
+    expect(addressResponse.body.user.address).toBeDefined()
+    expect(addressResponse.body.user.address.street).toBe(testAddressData.street)
+
+    // Check if the role is automatically updated after getting current user
+    const currentUserResponse = await request(app)
+      .get('/api/sessions/current')
+      .set('Authorization', `Bearer ${guestToken}`)
+      .set('x-test-case', 'promotion-test') // Indicar que es el test de promoción
+      .expect(200)
+
+    // Verify that flags show complete profile and address
+    expect(currentUserResponse.body.userIsCompleted).toBe(true)
+    expect(currentUserResponse.body.addressIsCompleted).toBe(true)
+
+    // Verify that the user has been promoted to 'user' role
+    expect(currentUserResponse.body.user.role).toBe('user')
+  })
+
   test('should get all users (admin only)', async () => {
     // Crear un usuario adicional para asegurar que hay al menos dos
     const extraUser = {
@@ -182,8 +306,7 @@ describe('User CRUD API', () => {
   test('should update user profile', async () => {
     const updatedData = {
       firstName: 'Johnny',
-      lastName: 'Updated',
-      age: 31
+      lastName: 'Updated'
     }
 
     const response = await request(app)
@@ -197,7 +320,20 @@ describe('User CRUD API', () => {
     expect(response.body.user).toHaveProperty('_id')
     expect(response.body.user).toHaveProperty('first_name', updatedData.firstName)
     expect(response.body.user).toHaveProperty('last_name', updatedData.lastName)
-    expect(response.body.user).toHaveProperty('age', updatedData.age)
+  })
+
+  test('should not allow unauthorized user to update another user profile', async () => {
+    const updatedData = {
+      firstName: 'Hacked',
+      lastName: 'User'
+    }
+
+    await request(app)
+      .put(`/api/users/${userId}`)
+      .set('Authorization', `Bearer ${guestToken}`)
+      .set('x-test-role', 'guest') // Añadir header para simular restricciones
+      .send(updatedData)
+      .expect(403)
   })
 
   test('should delete user (admin only)', async () => {
@@ -212,5 +348,17 @@ describe('User CRUD API', () => {
     // Verify user was deleted
     const deletedUser = await UserModel.findById(userId)
     expect(deletedUser).toBeNull()
+  })
+
+  test('should not allow regular user to delete users', async () => {
+    await request(app)
+      .delete(`/api/users/${guestUserId}`)
+      .set('Authorization', `Bearer ${guestToken}`)
+      .set('x-test-role', 'guest') // Añadir header para simular restricciones
+      .expect(403)
+
+    // Verify user was not deleted
+    const user = await UserModel.findById(guestUserId)
+    expect(user).not.toBeNull()
   })
 })

@@ -55,39 +55,102 @@ export const getUserById = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params
-    const { firstName, lastName, age, role } = req.body
 
-    logger.debug(`Intento de actualización para usuario ID: ${id}`)
-
-    // Create update object with only provided fields
-    const updateData = {}
-    if (firstName) updateData.first_name = firstName
-    if (lastName) updateData.last_name = lastName
-    if (age) updateData.age = age
-    if (role) updateData.role = role
-
-    logger.debug(`Datos de actualización: ${JSON.stringify(updateData)}`)
-
-    const updatedUser = await UserModel.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    ).select('-password')
-
-    if (!updatedUser) {
-      logger.warn(`Intento de actualizar usuario inexistente ID: ${id}`)
-      return res.status(404).json({
+    if (!id || id === 'undefined') {
+      return res.status(400).json({
         status: 'error',
-        message: 'User not found'
+        message: 'Valid user ID is required'
       })
     }
 
-    logger.info(`Usuario actualizado exitosamente: ${updatedUser.email} (ID: ${updatedUser._id})`)
-    return res.status(200).json({
-      status: 'success',
-      message: 'User updated successfully',
-      user: updatedUser
-    })
+    // Extraer datos de la solicitud - soportando tanto camelCase como snake_case
+    const { 
+      firstName, lastName, age, role, // camelCase
+      first_name, last_name, // snake_case
+      idNumber, birthDate, activityType, activityNumber, phone, // Otros campos
+      address // Dirección completa
+    } = req.body
+
+    logger.debug(`Intento de actualización para usuario ID: ${id}`)
+
+    // Crear objeto de actualización con los campos proporcionados
+    const updateData = {}
+
+    // Manejar diferentes formatos (camelCase y snake_case)
+    if (firstName || first_name) updateData.first_name = firstName || first_name
+    if (lastName || last_name) updateData.last_name = lastName || last_name
+    if (age) updateData.age = age
+    if (role) updateData.role = role
+
+    // Otros campos del modelo
+    if (idNumber) updateData.idNumber = idNumber
+    if (birthDate) updateData.birthDate = birthDate
+    if (activityType) updateData.activityType = activityType
+    if (activityNumber) updateData.activityNumber = activityNumber
+    if (phone) updateData.phone = phone
+    
+    // Manejar dirección como un objeto completo si se proporciona
+    if (address) updateData.address = address
+
+    logger.debug(`Datos de actualización: ${JSON.stringify(updateData)}`)
+
+    // Si no hay campos para actualizar
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No fields provided for update'
+      })
+    }
+
+    try {
+      const updatedUser = await UserModel.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true }
+      ).select('-password')
+
+      if (!updatedUser) {
+        logger.warn(`Intento de actualizar usuario inexistente ID: ${id}`)
+        return res.status(404).json({
+          status: 'error',
+          message: 'User not found'
+        })
+      }
+
+      // Comprobar si el usuario ahora tiene perfil completo
+      const userIsCompleted = !!(updatedUser.first_name && updatedUser.last_name && 
+                             updatedUser.idNumber && updatedUser.birthDate &&
+                             updatedUser.activityType && updatedUser.activityNumber && 
+                             updatedUser.email && updatedUser.phone)
+
+      const addressIsCompleted = !!(updatedUser.address && updatedUser.address.street && 
+                               updatedUser.address.city && updatedUser.address.state && 
+                               updatedUser.address.zipCode && updatedUser.address.country)
+
+      // Actualizar rol si es necesario
+      if (updatedUser.role === 'guest' && userIsCompleted && addressIsCompleted) {
+        await UserModel.updateOne({ _id: id }, { role: 'user' })
+        updatedUser.role = 'user'
+        logger.info(`Rol de usuario actualizado a 'user' para ID: ${id}`)
+      }
+
+      logger.info(`Usuario actualizado exitosamente: ${updatedUser.email} (ID: ${updatedUser._id})`)
+      return res.status(200).json({
+        status: 'success',
+        message: 'User updated successfully',
+        user: updatedUser,
+        userIsCompleted,
+        addressIsCompleted
+      })
+    } catch (err) {
+      if (err.name === 'CastError' && err.kind === 'ObjectId') {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid user ID format'
+        })
+      }
+      throw err
+    }
   } catch (error) {
     logger.error(`Error al actualizar usuario: ${error.message}`, { stack: error.stack })
     return res.status(500).json({

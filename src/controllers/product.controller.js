@@ -1,26 +1,133 @@
+/* eslint-disable camelcase */
 import { ProductModel } from '../models/product.model.js'
+import cloudinaryService from '../services/cloudinary.service.js'
 
 // Crear un nuevo producto
 export const createProduct = async (req, res) => {
   try {
-    const { name, description, price, stock, category, image } = req.body
+    // Extraer datos del cuerpo
+    const {
+      title,
+      description,
+      information,
+      product_code,
+      supplier,
+      characteristics,
+      brand,
+      model,
+      warranty,
+      slug,
+      origin,
+      price,
+      iva,
+      discount,
+      stock,
+      category,
+      subcategory,
+      url
+    } = req.body
+
+    // Para multipart/form-data, req.body puede tener múltiples entradas con el mismo nombre
+    // lo que Express convierte en arrays, pero si solo hay uno, será un string
+    const systemArray = Array.isArray(req.body.system) ? req.body.system : (req.body.system ? [req.body.system] : [])
+    const partnerArray = Array.isArray(req.body.partner) ? req.body.partner : (req.body.partner ? [req.body.partner] : [])
+    const familyArray = Array.isArray(req.body.family) ? req.body.family : (req.body.family ? [req.body.family] : [])
+    const tagsArray = Array.isArray(req.body.tags) ? req.body.tags : (req.body.tags ? [req.body.tags] : [])
+
+    const uploadedImages = []
+    const uploadedFiles = []
 
     // Validar datos obligatorios
-    if (!name || !description || !price || !category) {
+    if (!title || !description || !information || !product_code || !supplier ||
+        !characteristics || !brand || !model || !warranty || !slug || !origin ||
+        !price || !category || !subcategory) {
       return res.status(400).json({
         status: 'error',
-        message: 'Faltan campos obligatorios (name, description, price, category)'
+        message: 'Faltan campos obligatorios para el producto'
       })
     }
 
-    // Crear el producto
+    // Procesar imágenes si existen
+    if (req.files && req.files.images) {
+      for (const file of req.files.images) {
+        try {
+          // Subir cada imagen a Cloudinary en la carpeta de productos/imágenes
+          const result = await cloudinaryService.uploadFile(
+            file.path,
+            'products/images',
+            'image'
+          )
+          // Formatear y guardar el resultado
+          uploadedImages.push(cloudinaryService.formatCloudinaryResult(result))
+        } catch (uploadError) {
+          console.error('Error al subir imagen:', uploadError)
+          // Continuar con las siguientes imágenes
+        }
+      }
+    }
+
+    // Procesar archivos si existen
+    if (req.files && req.files.files) {
+      for (const file of req.files.files) {
+        try {
+          // Subir cada archivo a Cloudinary en la carpeta de productos/files
+          const result = await cloudinaryService.uploadFile(
+            file.path,
+            'products/files',
+            'raw' // o 'auto' para detección automática
+          )
+          // Formatear y guardar el resultado
+          uploadedFiles.push(cloudinaryService.formatCloudinaryResult(result))
+        } catch (uploadError) {
+          console.error('Error al subir archivo:', uploadError)
+          // Continuar con los siguientes archivos
+        }
+      }
+    }
+
+    // Establecer la imagen principal (primera imagen o placeholder)
+    const mainImage = uploadedImages.length > 0
+      ? uploadedImages[0].secure_url
+      : 'https://via.placeholder.com/150'
+
+    // Preparar las características utilizando la estructura Map
+    const characteristicsMap = {
+      properties: new Map()
+    }
+
+    // Si se proporciona un objeto de características, convertirlo a Map
+    if (characteristics && typeof characteristics === 'object') {
+      Object.entries(characteristics).forEach(([key, value]) => {
+        characteristicsMap.properties.set(key, value)
+      })
+    }
+    // Crear el producto con las imágenes y archivos
     const newProduct = await ProductModel.create({
-      name,
+      title,
       description,
+      information,
+      product_code,
+      supplier,
+      characteristics: characteristicsMap,
+      brand,
+      model,
+      warranty,
+      slug,
+      origin,
       price,
+      iva: iva || 0,
+      discount: discount || false,
       stock: stock || 0,
       category,
-      image: image || 'https://via.placeholder.com/150'
+      subcategory,
+      system: systemArray,
+      partner: partnerArray,
+      family: familyArray,
+      tags: tagsArray,
+      url,
+      main_image: mainImage,
+      images: uploadedImages,
+      files: uploadedFiles
     })
 
     return res.status(201).json({
@@ -47,8 +154,38 @@ export const getAllProducts = async (req, res) => {
 
     // Filtros
     const filter = {}
-    if (req.query.category) {
-      filter.category = req.query.category
+
+    // Filtrado por campos comunes
+    const filterFields = [
+      'category', 'subcategory', 'brand', 'supplier',
+      'origin', 'model', 'product_code', 'slug'
+    ]
+
+    filterFields.forEach(field => {
+      if (req.query[field]) {
+        filter[field] = req.query[field]
+      }
+    })
+
+    // Filtros para campos de array
+    const arrayFields = ['system', 'partner', 'family', 'tags']
+    arrayFields.forEach(field => {
+      if (req.query[field]) {
+        filter[field] = { $in: [req.query[field]] }
+      }
+    })
+
+    // Filtro de precios
+    if (req.query.minPrice) {
+      filter.price = { ...filter.price, $gte: parseFloat(req.query.minPrice) }
+    }
+    if (req.query.maxPrice) {
+      filter.price = { ...filter.price, $lte: parseFloat(req.query.maxPrice) }
+    }
+
+    // Filtrar por descuento
+    if (req.query.discount === 'true') {
+      filter.discount = true
     }
 
     // Ordenamiento
@@ -130,6 +267,25 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params
     const updateData = req.body
+    const uploadedImages = []
+    const uploadedFiles = []
+    const productUpdates = { ...updateData }
+
+    // Procesar las características si se han proporcionado
+    if (updateData.characteristics && typeof updateData.characteristics === 'object') {
+      // Crear un nuevo objeto para las propiedades del Map
+      const characteristicsMap = {
+        properties: new Map()
+      }
+
+      // Convertir el objeto de características en entradas para el Map
+      Object.entries(updateData.characteristics).forEach(([key, value]) => {
+        characteristicsMap.properties.set(key, value)
+      })
+
+      // Reemplazar el objeto de características original con el Map
+      productUpdates.characteristics = characteristicsMap
+    }
 
     // Verificar si el producto existe
     const existingProduct = await ProductModel.findById(id)
@@ -140,10 +296,62 @@ export const updateProduct = async (req, res) => {
       })
     }
 
+    // Procesar imágenes si existen en la solicitud
+    if (req.files && req.files.images) {
+      for (const file of req.files.images) {
+        try {
+          // Subir cada imagen a Cloudinary
+          const result = await cloudinaryService.uploadFile(
+            file.path,
+            'products/images',
+            'image'
+          )
+          // Formatear y guardar el resultado
+          uploadedImages.push(cloudinaryService.formatCloudinaryResult(result))
+        } catch (uploadError) {
+          console.error('Error al subir imagen:', uploadError)
+        }
+      }
+
+      // Si hay nuevas imágenes, actualizar el array de imágenes del producto
+      if (uploadedImages.length > 0) {
+        // Combinar imágenes existentes con las nuevas
+        productUpdates.images = [...(existingProduct.images || []), ...uploadedImages]
+
+        // Actualizar la imagen principal si es necesario
+        if (!existingProduct.main_image || existingProduct.main_image === 'https://via.placeholder.com/150') {
+          productUpdates.main_image = uploadedImages[0].secure_url
+        }
+      }
+    }
+
+    // Procesar archivos si existen en la solicitud
+    if (req.files && req.files.files) {
+      for (const file of req.files.files) {
+        try {
+          // Subir cada archivo a Cloudinary
+          const result = await cloudinaryService.uploadFile(
+            file.path,
+            'products/files',
+            'raw'
+          )
+          // Formatear y guardar el resultado
+          uploadedFiles.push(cloudinaryService.formatCloudinaryResult(result))
+        } catch (uploadError) {
+          console.error('Error al subir archivo:', uploadError)
+        }
+      }
+
+      // Si hay nuevos archivos, actualizar el array de archivos del producto
+      if (uploadedFiles.length > 0) {
+        productUpdates.files = [...(existingProduct.files || []), ...uploadedFiles]
+      }
+    }
+
     // Actualizar el producto
     const updatedProduct = await ProductModel.findByIdAndUpdate(
       id,
-      updateData,
+      productUpdates,
       { new: true, runValidators: true }
     )
 

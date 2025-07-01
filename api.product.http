@@ -8,8 +8,8 @@ POST {{baseUrl}}/api/sessions/login
 Content-Type: application/json
 
 {
-  "email": "admin@example.com",
-  "password": "adminpass123"
+  "email": "madezdev@gmail.com",
+  "password": "Pepe@1234"
 }
 
 ### Obtener todos los productos
@@ -21,30 +21,249 @@ GET {{baseUrl}}/api/products?page=1&limit=5&category=electrónica&sort=price:des
 ### Obtener un producto por ID
 GET {{baseUrl}}/api/products/{{productId}}
 
-### Crear un producto (requiere autenticación como admin)
+### Crear un producto COMPLETO (requiere autenticación como admin)
+# @name createProduct
 POST {{baseUrl}}/api/products
-Content-Type: application/json
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 Authorization: Bearer {{token}}
 
-{
-  "name": "Producto de prueba",
-  "description": "Este es un producto de prueba",
-  "price": 1000,
-  "stock": 10,
-  "category": "electrónica",
-  "image": "https://via.placeholder.com/150"
-}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="title"
+
+Panel solar 585W - bifacial Astro N5 - Tier 1
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+14.36A (Isc) | 51.50V (Voc) | 144 medias celdas | Monocristalino Half Cell
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="information"
+
+Panel solar 585W bifacial monocristalino Astro N5 - Tier 1, 144 celdas, 5BB. Certificado por TÜV Rheinland. La serie ASTRO N5 emplea la tecnología de celdas TOPCon 4.0 tipo n de última generación, desarrollada por Astronergy, y obleas de silicio de gran tamaño de 182 mm, combinadas con tecnología SMBB.
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="product_id"
+
+PS-5913
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="product_code"
+
+5913
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="supplier"
+
+YPF Solar
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="brand"
+
+Astronergy
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="model"
+
+Astro N5
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="warranty"
+
+30 años de garantía de potencia lineal, 15 años de garantía de producto
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="slug"
+
+panel-solar-585wp-astronergy-5913
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="origin"
+
+China
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="price"
+
+98
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="iva"
+
+10.5
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="discount"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="stock"
+
+50
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+fotovoltaico
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="subcategory"
+
+multisistema
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="system"
+
+on-grid
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="system"
+
+hybrid
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="system"
+
+off-grid
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="partner"
+
+6008
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="partner"
+
+6009
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="partner"
+
+5036
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="family"
+
+6035
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="family"
+
+5960
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tags"
+
+solar
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tags"
+
+panel solar
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tags"
+
+monocristalino half cell
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="characteristics"
+
+{"dimensions":"2278 x 1134 x 30mm","weight":"32.1kg","cell_type":"Monocrystalline","efficiency":"22.1%","nominal_Power":"585","nominal_Voltage":"43.27","nominal_Current":"13.52","open_Circuit_Voltage":"51.50","short_Circuit_Current":"14.36","module_Efficiency":"22.6","packing_unit":"36 pcs/box","weight_of_packing_unit":"1207kg"}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="images"; filename="test-image.jpg"
+Content-Type: image/jpeg
+
+< ./test-assets/test-image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="test-datasheet.pdf"
+Content-Type: application/pdf
+
+< ./test-assets/test-datasheet.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Crear un producto MINIMO (para pruebas rápidas)
+# @name createMinimalProduct
+POST {{baseUrl}}/api/products
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+Authorization: Bearer {{token}}
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="title"
+
+Panel solar de prueba
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+Descripción básica
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="information"
+
+Información de prueba
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="product_id"
+
+PROD-TEST-123
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="product_code"
+
+TEST-123
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="supplier"
+
+Proveedor Test
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="brand"
+
+Marca Test
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="model"
+
+Modelo Test
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="warranty"
+
+1 año
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="slug"
+
+panel-test-123
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="origin"
+
+Argentina
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="price"
+
+50
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+prueba
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="subcategory"
+
+test
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="system"
+
+test
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="partner"
+
+test
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="family"
+
+test
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tags"
+
+test
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="characteristics"
+
+{"test":"test"}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Guardar ID del producto creado para uso posterior
+@productId = {{createProduct.response.body.product._id}}
 
 ### Actualizar un producto (requiere autenticación como admin)
 PUT {{baseUrl}}/api/products/{{productId}}
-Content-Type: application/json
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 Authorization: Bearer {{token}}
 
-{
-  "price": 1200,
-  "stock": 15,
-  "description": "Descripción actualizada del producto"
-}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="price"
+
+120
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="stock"
+
+25
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+Descripción actualizada del panel solar
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="characteristics"
+
+{"dimensions":"2278 x 1134 x 30mm","weight":"32.1kg","cell_type":"Monocrystalline","efficiency":"22.5%","nominal_Power":"590"}
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ### Eliminar un producto (requiere autenticación como admin)
 DELETE {{baseUrl}}/api/products/{{productId}}

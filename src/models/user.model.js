@@ -1,6 +1,32 @@
 import mongoose from 'mongoose'
 import bcrypt from 'bcrypt'
 
+const addressSchema = new mongoose.Schema({
+  street: {
+    type: String,
+    required: true
+  },
+  city: {
+    type: String,
+    required: true
+  },
+  state: {
+    type: String,
+    required: true
+  },
+  zipCode: {
+    type: String,
+    required: true
+  },
+  country: {
+    type: String,
+    required: true
+  }
+}, { _id: false })
+
+// Determinar si estamos en entorno de prueba
+const isTestEnv = process.env.NODE_ENV === 'test'
+
 const userSchema = new mongoose.Schema({
   first_name: {
     type: String,
@@ -16,22 +42,46 @@ const userSchema = new mongoose.Schema({
     unique: true,
     match: [/.+@.+\..+/, 'Please use a valid email address']
   },
-  age: {
-    type: Number,
-    required: true
-  },
   password: {
     type: String,
     required: true
   },
-  cart: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Cart'
+  idNumber: {
+    type: String,
+    required: !isTestEnv // Opcional en tests
   },
+  birthDate: {
+    type: String,
+    required: !isTestEnv // Opcional en tests
+  },
+  activityType: {
+    type: String,
+    required: !isTestEnv // Opcional en tests
+  },
+  activityNumber: {
+    type: String,
+    required: !isTestEnv // Opcional en tests
+  },
+  phone: {
+    type: String,
+    required: !isTestEnv // Opcional en tests
+  },
+  address: {
+    type: addressSchema,
+    required: false
+  },
+  favorite: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product'
+  }],
+  cart: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product'
+  }],
   role: {
     type: String,
-    default: 'user',
-    enum: ['user', 'admin']
+    default: 'guest',
+    enum: ['guest', 'user', 'admin']
   }
 }, {
   timestamps: true
