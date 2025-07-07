@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { UserModel } from '../models/user.model.js'
 import logger from '../config/logger.config.js'
 
@@ -64,7 +65,7 @@ export const updateUser = async (req, res) => {
     }
 
     // Extraer datos de la solicitud - soportando tanto camelCase como snake_case
-    const { 
+    const {
       firstName, lastName, age, role, // camelCase
       first_name, last_name, // snake_case
       idNumber, birthDate, activityType, activityNumber, phone, // Otros campos
@@ -88,7 +89,7 @@ export const updateUser = async (req, res) => {
     if (activityType) updateData.activityType = activityType
     if (activityNumber) updateData.activityNumber = activityNumber
     if (phone) updateData.phone = phone
-    
+
     // Manejar dirección como un objeto completo si se proporciona
     if (address) updateData.address = address
 
@@ -118,14 +119,14 @@ export const updateUser = async (req, res) => {
       }
 
       // Comprobar si el usuario ahora tiene perfil completo
-      const userIsCompleted = !!(updatedUser.first_name && updatedUser.last_name && 
-                             updatedUser.idNumber && updatedUser.birthDate &&
-                             updatedUser.activityType && updatedUser.activityNumber && 
-                             updatedUser.email && updatedUser.phone)
+      const userIsCompleted = !!(updatedUser.first_name && updatedUser.last_name &&
+        updatedUser.idNumber && updatedUser.birthDate &&
+        updatedUser.activityType && updatedUser.activityNumber &&
+        updatedUser.email && updatedUser.phone)
 
-      const addressIsCompleted = !!(updatedUser.address && updatedUser.address.street && 
-                               updatedUser.address.city && updatedUser.address.state && 
-                               updatedUser.address.zipCode && updatedUser.address.country)
+      const addressIsCompleted = !!(updatedUser.address && updatedUser.address.street &&
+        updatedUser.address.city && updatedUser.address.state &&
+        updatedUser.address.zipCode && updatedUser.address.country)
 
       // Actualizar rol si es necesario
       if (updatedUser.role === 'guest' && userIsCompleted && addressIsCompleted) {
