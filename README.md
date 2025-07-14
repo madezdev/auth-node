@@ -13,6 +13,9 @@ Un sistema de autenticación seguro con Node.js, Express y JWT.
 - Validación de datos de entrada
 - Gestión de permisos y roles de usuario
 - Sistema de logging avanzado con Winston
+- Recuperación de contraseña con tokens seguros
+- Carrito de compras con gestión de productos
+- Finalización de compras para usuarios autenticados
 
 ## Requisitos
 

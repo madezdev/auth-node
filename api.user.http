@@ -5,58 +5,15 @@
 
 @userId = 685c671e7608fd12c7a2c0df
 
-### Create admin user
-POST {{baseUrl}}/api/sessions/admin
-Content-Type: application/json
-
-{
-  "first_name": "Admin",
-  "last_name": "User",
-  "email": "admin@example.com",
-  "age": 35,
-  "password": "adminpass123"
-}
-
-# @name createAdmin
-
-### Register new user
-POST {{baseUrl}}/api/sessions/register
-Content-Type: application/json
-
-{
-  "first_name": "Martin",
-  "last_name": "Doe",
-  "email": "martin.doe@example.com",
-  "age": 30,
-  "password": "password123"
-}
-
-### Login
-POST {{baseUrl}}/api/sessions/login HTTP/1.1
-Content-Type: application/json
-
-{
-  "email": "k",
-  "password": "adminpass123"
-}
-# @name login
-# Guarda la respuesta del login para extraer el token más adelante
-
-### Get current user profile
-# Usa el token de la respuesta del login
-# @token {{login.response.body.token}}
-GET {{baseUrl}}/api/sessions/current HTTP/1.1
-Authorization: Bearer {{token}}
-
-### Get all users (admin only)
+### Obtener todos los usuarios (solo admin)
 GET {{baseUrl}}/api/users HTTP/1.1
 Authorization: Bearer {{adminToken}}
 
-### Get user by ID
+### Obtener usuario por ID (requiere autenticación, solo el propio usuario o admin)
 GET {{baseUrl}}/api/users/{{userId}} HTTP/1.1
 Authorization: Bearer {{token}}
 
-### Update user
+### Actualizar usuario (requiere autenticación, solo el propio usuario o admin)
 PUT {{baseUrl}}/api/users/{{userId}} HTTP/1.1
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -64,9 +21,15 @@ Content-Type: application/json
 {
   "first_name": "John",
   "last_name": "Smith",
-  "age": 31
+  "age": 31,
+  "address": {
+    "street": "123 Main St",
+    "city": "New York",
+    "zip": "10001",
+    "country": "USA"
+  }
 }
 
-### Delete user (admin only)
-DELETE http://localhost:8080/api/users/{{userId}}
+### Eliminar usuario (solo admin)
+DELETE {{baseUrl}}/api/users/{{userId}}
 Authorization: Bearer {{adminToken}}

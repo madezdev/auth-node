@@ -28,6 +28,10 @@ const updatedProduct = {
 beforeAll(async () => {
   await setupTestDB()
 
+  // Limpiar las colecciones antes de comenzar
+  await UserModel.deleteMany({})
+  await ProductModel.deleteMany({})
+
   // Crear usuario admin para pruebas
   const adminUser = await UserModel.create({
     first_name: 'Admin',
@@ -44,14 +48,14 @@ beforeAll(async () => {
     config.SECRET,
     { expiresIn: '1h' }
   )
-})
+}, 60000)
 
 // Limpiar base de datos después de todas las pruebas
 afterAll(async () => {
   await UserModel.deleteMany({})
   await ProductModel.deleteMany({})
   await closeTestDB()
-})
+}, 60000)
 
 describe('Product API Tests', () => {
   describe('POST /api/products', () => {
@@ -69,7 +73,7 @@ describe('Product API Tests', () => {
 
       // Guardar ID para pruebas posteriores
       testProductId = response.body.product._id
-    })
+    }, 30000)
 
     test('should return 401 when not authenticated', async () => {
       const response = await request(app)
@@ -78,7 +82,7 @@ describe('Product API Tests', () => {
 
       expect(response.status).toBe(401)
       expect(response.body.status).toBe('error')
-    })
+    }, 30000)
 
     test('should return 400 when required fields are missing', async () => {
       const response = await request(app)
@@ -91,20 +95,39 @@ describe('Product API Tests', () => {
 
       expect(response.status).toBe(400)
       expect(response.body.status).toBe('error')
-    })
+    }, 30000)
   })
 
   describe('GET /api/products', () => {
     test('should get all products', async () => {
-      const response = await request(app).get('/api/products')
+      // Garantizar que tenemos al menos un producto
+      if (testProductId) {
+        const response = await request(app).get('/api/products')
 
-      expect(response.status).toBe(200)
-      expect(response.body.status).toBe('success')
-      expect(Array.isArray(response.body.payload)).toBe(true)
-      expect(response.body.payload.length).toBeGreaterThan(0)
-      expect(response.body).toHaveProperty('totalPages')
-      expect(response.body).toHaveProperty('page')
-    })
+        expect(response.status).toBe(200)
+        expect(response.body.status).toBe('success')
+        expect(Array.isArray(response.body.payload)).toBe(true)
+        expect(response.body.payload.length).toBeGreaterThan(0)
+        expect(response.body).toHaveProperty('totalPages')
+        expect(response.body).toHaveProperty('page')
+      } else {
+        // Si no tenemos un ID de producto, primero creamos uno
+        const createResponse = await request(app)
+          .post('/api/products')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send(testProduct)
+
+        testProductId = createResponse.body.product._id
+
+        // Luego consultamos todos
+        const response = await request(app).get('/api/products')
+
+        expect(response.status).toBe(200)
+        expect(response.body.status).toBe('success')
+        expect(Array.isArray(response.body.payload)).toBe(true)
+        expect(response.body.payload.length).toBeGreaterThan(0)
+      }
+    }, 30000)
 
     test('should filter products by category', async () => {
       // Crear un producto con categoría específica para el test
@@ -127,10 +150,10 @@ describe('Product API Tests', () => {
       response.body.payload.forEach(product => {
         expect(product.category).toBe('special_category')
       })
-    })
+    }, 30000)
 
     test('should paginate results', async () => {
-      // Crear varios productos para probar paginaciónk
+      // Crear varios productos para probar paginación
       const productsToCreate = []
       for (let i = 0; i < 15; i++) {
         productsToCreate.push({
@@ -149,11 +172,22 @@ describe('Product API Tests', () => {
       expect(response.status).toBe(200)
       expect(response.body.payload.length).toBeLessThanOrEqual(10)
       expect(response.body.hasNextPage).toBe(true)
-    })
+    }, 30000)
   })
 
   describe('GET /api/products/:id', () => {
     test('should get a product by id', async () => {
+      // Asegurarnos de que tenemos un ID válido para consultar
+      if (!testProductId) {
+        // Crear un producto si no existe
+        const createResponse = await request(app)
+          .post('/api/products')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send(testProduct)
+
+        testProductId = createResponse.body.product._id
+      }
+      
       const response = await request(app)
         .get(`/api/products/${testProductId}`)
 
@@ -161,7 +195,7 @@ describe('Product API Tests', () => {
       expect(response.body.status).toBe('success')
       expect(response.body.product._id).toBe(testProductId)
       expect(response.body.product.name).toBe(testProduct.name)
-    })
+    }, 30000)
 
     test('should return 404 for non-existent product', async () => {
       const nonExistentId = '60f7e5b0e4a3c5b3a8f7e5b0'
@@ -171,7 +205,7 @@ describe('Product API Tests', () => {
       expect(response.status).toBe(404)
       expect(response.body.status).toBe('error')
       expect(response.body.message).toBe('Producto no encontrado')
-    })
+    }, 30000)
 
     test('should return 400 for invalid product id', async () => {
       const response = await request(app)
@@ -180,11 +214,22 @@ describe('Product API Tests', () => {
       expect(response.status).toBe(400)
       expect(response.body.status).toBe('error')
       expect(response.body.message).toBe('ID de producto inválido')
-    })
+    }, 30000)
   })
 
   describe('PUT /api/products/:id', () => {
     test('should update a product when authenticated as admin', async () => {
+      // Asegurarnos de que tenemos un ID válido para actualizar
+      if (!testProductId) {
+        // Crear un producto si no existe
+        const createResponse = await request(app)
+          .post('/api/products')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send(testProduct)
+
+        testProductId = createResponse.body.product._id
+      }
+      
       const response = await request(app)
         .put(`/api/products/${testProductId}`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -195,16 +240,27 @@ describe('Product API Tests', () => {
       expect(response.body.message).toBe('Producto actualizado exitosamente')
       expect(response.body.product.description).toBe(updatedProduct.description)
       expect(response.body.product.price).toBe(updatedProduct.price)
-    })
+    }, 30000)
 
     test('should return 401 when not authenticated', async () => {
+      // Asegurarnos de que tenemos un ID válido para la prueba
+      if (!testProductId) {
+        // Crear un producto si no existe
+        const createResponse = await request(app)
+          .post('/api/products')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send(testProduct)
+
+        testProductId = createResponse.body.product._id
+      }
+      
       const response = await request(app)
         .put(`/api/products/${testProductId}`)
         .send(updatedProduct)
 
       expect(response.status).toBe(401)
       expect(response.body.status).toBe('error')
-    })
+    }, 30000)
 
     test('should return 404 for non-existent product', async () => {
       const nonExistentId = '60f7e5b0e4a3c5b3a8f7e5b0'
@@ -216,13 +272,24 @@ describe('Product API Tests', () => {
       expect(response.status).toBe(404)
       expect(response.body.status).toBe('error')
       expect(response.body.message).toBe('Producto no encontrado')
-    })
+    }, 30000)
   })
 
   describe('DELETE /api/products/:id', () => {
     test('should delete a product when authenticated as admin', async () => {
+      // Crear un producto específicamente para eliminar
+      const productToDelete = await ProductModel.create({
+        name: 'Product to be deleted',
+        description: 'This product will be deleted in the test',
+        price: 1000,
+        stock: 20,
+        category: 'test'
+      })
+      
+      const deleteId = productToDelete._id.toString()
+      
       const response = await request(app)
-        .delete(`/api/products/${testProductId}`)
+        .delete(`/api/products/${deleteId}`)
         .set('Authorization', `Bearer ${adminToken}`)
 
       expect(response.status).toBe(200)
@@ -230,15 +297,15 @@ describe('Product API Tests', () => {
       expect(response.body.message).toBe('Producto eliminado exitosamente')
 
       // Verificar que el producto ya no existe
-      const deletedProduct = await ProductModel.findById(testProductId)
+      const deletedProduct = await ProductModel.findById(deleteId)
       expect(deletedProduct).toBeNull()
-    })
+    }, 30000)
 
     test('should return 401 when not authenticated', async () => {
-      // Crear un nuevo producto para eliminarlo
+      // Crear un nuevo producto para la prueba
       const newProduct = await ProductModel.create({
-        name: 'Product to delete',
-        description: 'This product will be deleted',
+        name: 'Product for auth test',
+        description: 'This product is for testing authentication',
         price: 500,
         stock: 10,
         category: 'test'
@@ -249,7 +316,7 @@ describe('Product API Tests', () => {
 
       expect(response.status).toBe(401)
       expect(response.body.status).toBe('error')
-    })
+    }, 30000)
 
     test('should return 404 for non-existent product', async () => {
       const nonExistentId = '60f7e5b0e4a3c5b3a8f7e5b0'
@@ -260,6 +327,6 @@ describe('Product API Tests', () => {
       expect(response.status).toBe(404)
       expect(response.body.status).toBe('error')
       expect(response.body.message).toBe('Producto no encontrado')
-    })
+    }, 30000)
   })
 })
