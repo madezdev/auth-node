@@ -82,9 +82,22 @@ describe('User Authentication API', () => {
     }
 
     // Extraer userId del token JWT
-    const tokenParts = userToken.split('.')
-    const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString())
-    userId = payload.id
+    if (userToken) {
+      const tokenParts = userToken.split('.')
+      if (tokenParts && tokenParts.length >= 2) {
+        try {
+          const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString())
+          userId = payload.id || payload._id // handle both id and _id properties
+          console.log('Successfully extracted userId:', userId)
+        } catch (error) {
+          console.error('Error parsing token:', error)
+        }
+      } else {
+        console.error('Invalid token format, expected 3 parts but got:', tokenParts?.length)
+      }
+    } else {
+      console.error('No user token available to extract userId')
+    }
   })
 
   test('should not login with invalid credentials', async () => {

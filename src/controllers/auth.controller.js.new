@@ -165,25 +165,35 @@ export const login = async (req, res) => {
       // Incrementar contador de intentos fallidos
       user.failedLoginAttempts += 1
       logger.warn(`Intento de login fallido #${user.failedLoginAttempts} para: ${email} desde IP: ${clientIp}`)
-
+      
       // Verificar si debemos bloquear la cuenta (5 intentos fallidos)
       if (user.failedLoginAttempts >= 5) {
         // Bloquear cuenta por 30 minutos
         const lockDuration = 30 * 60 * 1000 // 30 minutos en milisegundos
         user.accountLocked = true
         user.accountLockedUntil = new Date(Date.now() + lockDuration)
-
+        
         await user.save()
-
+        
         logger.warn(`Cuenta bloqueada por exceso de intentos: ${email} desde IP: ${clientIp}`)
         return res.status(403).json({
           status: 'error',
           message: 'Too many failed login attempts. Account locked for 30 minutes.'
         })
       }
-
+      
       await user.save()
       return res.status(401).json({ status: 'error', message: 'Invalid credentials' })
+    }
+
+    // Verificar si el usuario tiene perfil completo y actualizar role si es necesario
+    const userIsCompleted = user.first_name && user.last_name && user.age
+    const addressIsCompleted = user.address && user.address.street && user.address.city && 
+                              user.address.state && user.address.zipCode
+    
+    if (user.role === 'guest' && userIsCompleted && addressIsCompleted) {
+      user.role = 'user'
+      logger.info(`Usuario promovido a 'user': ${email} - perfil completado`)
     }
 
     // Credenciales válidas - resetear contador de intentos fallidos
@@ -191,7 +201,7 @@ export const login = async (req, res) => {
     user.accountLocked = false
     user.accountLockedUntil = null
     await user.save()
-
+    
     logger.debug(`Credenciales válidas para: ${email} desde IP: ${clientIp}`)
 
     // Generar access token (corta duración)
@@ -200,7 +210,7 @@ export const login = async (req, res) => {
       config.SECRET,
       { expiresIn: JWT_CONFIG.EXPIRES_IN, algorithm: JWT_CONFIG.ALGORITHM }
     )
-
+    
     // Generar refresh token (larga duración)
     const refreshToken = jwt.sign(
       { id: user._id },
@@ -208,15 +218,23 @@ export const login = async (req, res) => {
       { expiresIn: '7d', algorithm: JWT_CONFIG.ALGORITHM }
     )
 
-    // Set token as HTTP-only cookie
-    res.cookie('token', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Only send cookie over HTTPS in production
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    // Set access token as HTTP-only cookie
+    res.cookie(JWT_CONFIG.COOKIE_NAME, accessToken, {
+      httpOnly: COOKIE_CONFIG.HTTP_ONLY,
+      secure: COOKIE_CONFIG.SECURE,
+      sameSite: COOKIE_CONFIG.SAME_SITE,
+      maxAge: COOKIE_CONFIG.MAX_AGE
+    })
+    
+    // Set refresh token as HTTP-only cookie with longer expiration
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: COOKIE_CONFIG.HTTP_ONLY,
+      secure: COOKIE_CONFIG.SECURE,
+      sameSite: COOKIE_CONFIG.SAME_SITE,
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
     })
 
-    logger.info(`Login exitoso: ${email} (ID: ${user._id}, Role: ${user.role}, IP: ${clientIp})`)
+    logger.info(`Login exitoso: ${email} (ID: ${user._id}, Role: ${user.role}, IP: ${clientIp}`)
     return res.status(200).json({
       status: 'success',
       message: 'Login successful',
@@ -232,19 +250,14 @@ export const login = async (req, res) => {
   }
 }
 
-// Obtener usuario actual
 // Logout usuario
-export const logout = (req, res) => {
+export const logout = async (req, res) => {
   try {
-    // Identificar usuario por su token si está disponible
-    const userEmail = req.user ? req.user.email : 'unknown'
-
-    logger.debug(`Intento de logout: ${userEmail}`)
-
-    // Clear the HTTP-only cookie
+    // Eliminar cookies de sesión
     res.clearCookie('token')
-
-    logger.info(`Logout exitoso: ${userEmail}`)
+    res.clearCookie('refresh_token')
+    
+    logger.info(`Logout exitoso para usuario: ${req.user ? req.user.email : 'desconocido'}`)
     return res.status(200).json({
       status: 'success',
       message: 'Logout successful'
@@ -253,114 +266,126 @@ export const logout = (req, res) => {
     logger.error(`Error en logout: ${error.message}`, { stack: error.stack })
     return res.status(500).json({
       status: 'error',
-      message: 'An error occurred during logout',
-      error: error.message
+      message: 'An error occurred during logout'
     })
   }
 }
 
+// Obtener usuario actual
 export const getCurrentUser = async (req, res) => {
   try {
-    // Get user from request (set by authentication middleware)
-    const user = req.user
-
-    logger.debug(`Current user information requested: ${user.email}`)
-
-    // Check if user profile is complete and update role if needed
+    const userId = req.user.id
+    
     const userRepository = new UserRepository()
-    const { userIsCompleted, addressIsCompleted } = userRepository.checkProfileCompletion(user)
-
-    // If profile is complete but role is still guest, update to user
-    if (user.role === 'guest' && userIsCompleted && addressIsCompleted) {
-      await userRepository.updateRoleByCompletion(user)
-      user.role = 'user'
-      logger.info(`User ${user.email} role updated from 'guest' to 'user' due to profile completion`)
+    const user = await userRepository.getById(userId)
+    
+    if (!user) {
+      logger.warn(`Usuario no encontrado para ID: ${userId}`)
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      })
     }
 
-    // Use UserDTO to return non-sensitive user data
-    const userDTO = UserDTO.withProfileStatus(user, { userIsCompleted, addressIsCompleted })
-
-    logger.info(`Current user information sent: ${user.email}`)
+    // Verificar si el usuario tiene perfil completo y actualizar role si es necesario
+    const userIsCompleted = user.first_name && user.last_name && user.age
+    const addressIsCompleted = user.address && user.address.street && user.address.city && 
+                              user.address.state && user.address.zipCode
+    
+    if (user.role === 'guest' && userIsCompleted && addressIsCompleted) {
+      user.role = 'user'
+      await user.save()
+      logger.info(`Usuario promovido a 'user': ${user.email} - perfil completado`)
+    }
+    
+    const userDTO = new UserDTO(user)
+    
+    logger.info(`Información de usuario obtenida para: ${user.email}`)
     return res.status(200).json({
       status: 'success',
       user: userDTO
     })
   } catch (error) {
-    logger.error(`Error retrieving current user: ${error.message}`, { stack: error.stack })
+    logger.error(`Error al obtener usuario actual: ${error.message}`, { stack: error.stack })
     return res.status(500).json({
       status: 'error',
-      message: 'An error occurred while retrieving user data',
+      message: 'An error occurred while getting current user',
       error: error.message
     })
   }
 }
 
-/**
- * Request a password reset email
- */
+// Request a password reset email
 export const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body
-
+    
     if (!email) {
       return res.status(400).json({
         status: 'error',
-        message: 'Email address is required'
+        message: 'Email is required'
       })
     }
-
-    logger.debug(`Password reset requested for email: ${email}`)
-
+    
+    logger.debug(`Solicitud de reset de password para: ${email}`)
+    
     // Find user by email
-    const userRepository = new UserRepository()
-    const user = await userRepository.findByEmail(email)
-
+    const user = await UserModel.findOne({ email })
+    
+    // Si el usuario no existe, aun así devolvemos mensaje exitoso por seguridad
+    // para evitar enumeración de usuarios
     if (!user) {
-      // We don't want to reveal if a user exists or not for security reasons
-      // Instead, we'll respond with success even if the user doesn't exist
-      logger.warn(`Password reset requested for non-existent email: ${email}`)
+      logger.warn(`Intento de reset de password para email no registrado: ${email}`)
       return res.status(200).json({
         status: 'success',
-        message: 'If your email is registered, you will receive password reset instructions'
+        message: 'If that email address is in our database, we will send you an email to reset your password'
       })
     }
-
-    // Generate a random token
+    
+    // Generar token único para reset de contraseña
     const resetToken = crypto.randomBytes(32).toString('hex')
-
-    // Set token expiration to 1 hour from now
-    const resetTokenExpiration = new Date()
-    resetTokenExpiration.setHours(resetTokenExpiration.getHours() + 1)
-
-    // Save the token and expiration to the user document
-    await userRepository.createPasswordResetToken(
-      user._id,
-      resetToken,
-      resetTokenExpiration
-    )
-
-    // Build the reset link
-    const resetLink = `${config.FRONTEND_URL}/reset-password/${resetToken}`
-
-    // Send the reset email
-    const mailService = new MailService()
-    const emailSent = await mailService.sendPasswordResetEmail(user.email, resetLink)
-
-    if (!emailSent) {
-      logger.error(`Failed to send password reset email to ${email}`)
+    
+    // Establecer tiempo de expiración (1 hora)
+    const expireDate = new Date()
+    expireDate.setHours(expireDate.getHours() + 1)
+    
+    // Guardar token en el usuario
+    user.resetPasswordToken = resetToken
+    user.resetPasswordExpires = expireDate
+    await user.save()
+    
+    // Enviar correo con enlace de reset
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${resetToken}`
+    
+    try {
+      const mailService = new MailService()
+      await mailService.sendPasswordResetEmail({
+        to: user.email,
+        subject: 'Password Reset Request',
+        resetUrl
+      })
+      
+      logger.info(`Email de reset de password enviado a: ${user.email}`)
+    } catch (mailError) {
+      logger.error(`Error al enviar email de reset: ${mailError.message}`, { stack: mailError.stack })
+      
+      // Revertir cambios si falla el envío
+      user.resetPasswordToken = undefined
+      user.resetPasswordExpires = undefined
+      await user.save()
+      
       return res.status(500).json({
         status: 'error',
-        message: 'Failed to send password reset email'
+        message: 'Error sending password reset email'
       })
     }
-
-    logger.info(`Password reset email sent to ${email}`)
+    
     return res.status(200).json({
       status: 'success',
-      message: 'Password reset instructions have been sent to your email'
+      message: 'If that email address is in our database, we will send you an email to reset your password'
     })
   } catch (error) {
-    logger.error(`Error in password reset request: ${error.message}`, { stack: error.stack })
+    logger.error(`Error en solicitud de reset de password: ${error.message}`, { stack: error.stack })
     return res.status(500).json({
       status: 'error',
       message: 'An error occurred during password reset request',
@@ -375,20 +400,20 @@ export const requestPasswordReset = async (req, res) => {
 export const verifyResetToken = async (req, res) => {
   try {
     const { token } = req.params
-
+    
     if (!token) {
       return res.status(400).json({
         status: 'error',
         message: 'Reset token is required'
       })
     }
-
+    
     logger.debug(`Verifying reset token: ${token}`)
-
+    
     // Find user by reset token
     const userRepository = new UserRepository()
     const user = await userRepository.findByResetToken(token)
-
+    
     if (!user) {
       logger.warn(`Invalid or expired reset token: ${token}`)
       return res.status(400).json({
@@ -396,7 +421,7 @@ export const verifyResetToken = async (req, res) => {
         message: 'Password reset token is invalid or has expired'
       })
     }
-
+    
     logger.info(`Valid reset token for user: ${user.email}`)
     return res.status(200).json({
       status: 'success',
@@ -420,20 +445,20 @@ export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params
     const { password } = req.body
-
+    
     if (!token || !password) {
       return res.status(400).json({
         status: 'error',
         message: 'Token and new password are required'
       })
     }
-
+    
     logger.debug(`Resetting password with token: ${token}`)
-
+    
     // Find user by reset token
     const userRepository = new UserRepository()
     const user = await userRepository.findByResetToken(token)
-
+    
     if (!user) {
       logger.warn(`Invalid or expired reset token during password reset: ${token}`)
       return res.status(400).json({
@@ -441,7 +466,7 @@ export const resetPassword = async (req, res) => {
         message: 'Password reset token is invalid or has expired'
       })
     }
-
+    
     // Check if the new password is the same as the current one
     const isSamePassword = user.isValidPassword(password)
     if (isSamePassword) {
@@ -451,13 +476,13 @@ export const resetPassword = async (req, res) => {
         message: 'New password cannot be the same as the current one'
       })
     }
-
+    
     // Check if password was used previously
-    const wasUsedBefore = user.previousPasswords &&
+    const wasUsedBefore = user.previousPasswords && 
       user.previousPasswords.some(prevPassword => {
         return bcrypt.compareSync(password, prevPassword)
       })
-
+    
     if (wasUsedBefore) {
       logger.warn(`User ${user.email} attempted to reset password to a previously used password`)
       return res.status(400).json({
@@ -465,27 +490,32 @@ export const resetPassword = async (req, res) => {
         message: 'New password cannot be the same as any of your previous passwords'
       })
     }
-
+    
     // Store the current password in previousPasswords array before updating
     if (!user.previousPasswords) {
       user.previousPasswords = []
     }
     user.previousPasswords.push(user.password)
-
+    
     // Limit the number of stored previous passwords (e.g., keep only the last 5)
     if (user.previousPasswords.length > 5) {
       user.previousPasswords = user.previousPasswords.slice(-5)
     }
-
+    
     // Update user password
     user.password = password
-
+    
     // Clear the reset token
     user.resetPasswordToken = undefined
     user.resetPasswordExpires = undefined
-
+    
+    // Desbloquear cuenta si estaba bloqueada
+    user.accountLocked = false
+    user.accountLockedUntil = null
+    user.failedLoginAttempts = 0
+    
     await user.save()
-
+    
     logger.info(`Password successfully reset for user: ${user.email}`)
     return res.status(200).json({
       status: 'success',

@@ -1,5 +1,6 @@
 import { Router } from 'express'
-import { authenticateToken, authorizeRole } from '../middlewares/auth.middleware.js'
+import { authenticateToken } from '../middlewares/auth.middleware.js'
+import { adminProductCreation, adminProductUpdate, adminProductDeletion } from '../middlewares/product.middleware.js'
 import {
   createProduct,
   getAllProducts,
@@ -15,8 +16,8 @@ router.get('/', getAllProducts)
 router.get('/:id', getProductById)
 
 // Rutas protegidas (solo admin)
-router.post('/', authenticateToken, authorizeRole(['admin']), createProduct)
-router.put('/:id', authenticateToken, authorizeRole(['admin']), updateProduct)
-router.delete('/:id', authenticateToken, authorizeRole(['admin']), deleteProduct)
+router.post('/', authenticateToken, adminProductCreation(), createProduct)
+router.put('/:id', authenticateToken, adminProductUpdate(), updateProduct)
+router.delete('/:id', authenticateToken, adminProductDeletion(), deleteProduct)
 
 export default router

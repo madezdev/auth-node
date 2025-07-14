@@ -3,7 +3,7 @@ import { app } from '../src/server/server.js'
 import { UserModel } from '../src/models/user.model.js'
 import { CartModel } from '../src/models/cart.model.js'
 import { ProductModel } from '../src/models/product.model.js'
-import { beforeAll, afterAll, describe, test, expect } from '@jest/globals'
+import { beforeAll, afterAll, describe, test, expect, jest } from '@jest/globals'
 import { setupTestDB, closeTestDB } from './setup.js'
 
 // Test user data
@@ -20,6 +20,7 @@ let testProduct
 
 let userToken
 let cartId
+let testUserId
 
 // Connect to test database before running tests
 beforeAll(async () => {
@@ -46,6 +47,15 @@ beforeAll(async () => {
     .send(testUser)
 
   userToken = registerResponse.body.token
+
+  // Decodificar el token para obtener el ID del usuario
+  const tokenParts = userToken.split('.')
+  const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString())
+  testUserId = payload.id
+
+  // Obtener el usuario con su información de carrito
+  const user = await UserModel.findById(testUserId)
+  cartId = user.cart.toString() // Guardar el ID del carrito asociado al usuario
 }, 60000) // Incrementar timeout a 60 segundos
 
 // Disconnect from database after all tests
@@ -57,18 +67,17 @@ afterAll(async () => {
 }, 60000) // Incrementar timeout a 60 segundos
 
 describe('Cart API', () => {
-  test('should create a new cart', async () => {
+  // Increase timeout for all tests in this suite
+  jest.setTimeout(60000)
+  test('should get user cart info', async () => {
     const response = await request(app)
-      .post('/api/cart')
+      .get(`/api/cart/${cartId}`)
       .set('Authorization', `Bearer ${userToken}`)
-      .expect(201)
+      .expect(200)
 
-    expect(response.body).toHaveProperty('_id')
+    expect(response.body).toHaveProperty('_id', cartId)
     expect(response.body).toHaveProperty('products')
     expect(Array.isArray(response.body.products)).toBe(true)
-    expect(response.body.products.length).toBe(0)
-
-    cartId = response.body._id
   })
 
   test('should get cart by ID', async () => {

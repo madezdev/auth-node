@@ -1,5 +1,14 @@
 import { Router } from 'express'
-import { register, login, getCurrentUser, createAdmin, logout } from '../controllers/auth.controller.js'
+import {
+  register,
+  login,
+  getCurrentUser,
+  createAdmin,
+  logout,
+  requestPasswordReset,
+  verifyResetToken,
+  resetPassword
+} from '../controllers/auth.controller.js'
 import { authenticateToken, authorizeRole } from '../middlewares/auth.middleware.js'
 import { validateRegistration, validateLogin } from '../middlewares/validation.middleware.js'
 
@@ -23,5 +32,10 @@ router.get('/current', authenticateToken, getCurrentUser)
 
 // Ruta de logout
 router.get('/logout', logout)
+
+// Password reset routes
+router.post('/forgot-password', requestPasswordReset)
+router.get('/reset-password/:token', verifyResetToken)
+router.post('/reset-password/:token', resetPassword)
 
 export default router

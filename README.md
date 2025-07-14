@@ -13,6 +13,8 @@ Un sistema de autenticación seguro con Node.js, Express y JWT.
 - Validación de datos de entrada
 - Gestión de permisos y roles de usuario
 - Sistema de logging avanzado con Winston
+- Carrito de compras con autenticación
+- Sistema de pruebas automatizadas con Jest
 
 ## Requisitos
 
@@ -212,6 +214,75 @@ Se ha implementado un sistema de logging avanzado utilizando Winston para mejora
 - **Depuración**: Información contextual para resolución rápida de problemas
 - **Auditoría**: Registro de cambios en datos sensibles de usuarios
 - **Optimización**: Adaptación del nivel de detalle según el entorno
+
+## Pruebas Automatizadas (Tests)
+
+El sistema incluye pruebas automatizadas utilizando Jest y Supertest para verificar el correcto funcionamiento de los endpoints y la lógica de negocio.
+
+### Ejecutar los tests
+
+```bash
+npm test
+```
+
+### Suites de pruebas implementadas
+
+1. **Tests de usuarios**: Verifican el registro, inicio de sesión, y manejo de perfiles de usuario.
+2. **Tests de productos**: Comprueban las operaciones CRUD de productos, incluyendo validaciones.
+3. **Tests de carrito**: Validan operaciones del carrito de compras, como agregar/quitar productos, actualizar cantidades y procesar el checkout.
+
+### Entorno de pruebas
+
+- Base de datos MongoDB en memoria para tests independientes y aislados
+- Tokens JWT para pruebas de rutas autenticadas
+- Limpieza automática de datos de prueba entre ejecuciones
+
+## Patrones y Buenas Prácticas
+
+### Middlewares
+
+#### Middlewares como funciones factory
+
+Algunos middlewares están implementados como funciones factory (funciones que devuelven middlewares):
+
+```javascript
+export const someMiddleware = (options) => {
+  return (req, res, next) => {
+    // lógica del middleware
+    next()
+  }
+}
+```
+
+**Importante**: Cuando se usa un middleware de tipo factory en las rutas, debe invocarse con paréntesis:
+
+```javascript
+// CORRECTO: Invocación de middleware factory
+router.get('/path', authenticateToken, someMiddleware(), controller)
+
+// INCORRECTO: El middleware nunca se ejecutará correctamente
+router.get('/path', authenticateToken, someMiddleware, controller)
+```
+
+#### Permisos y autorización
+
+Los middlewares de autorización como `cartOwnershipMiddleware` verifican que el usuario autenticado tenga permisos para acceder a recursos específicos:
+
+- Verificación de propiedad de recursos (usuario-carrito)
+- Manejo especial para usuarios administradores
+- Validación segura de parámetros de ruta (req.params.id)
+
+## Solución de Problemas Comunes
+
+1. **Timeout en tests**: Si los tests fallan por timeout, verificar:
+   - Llamadas correctas a `next()` en middlewares
+   - Invocación adecuada de middlewares factory
+   - Coherencia entre nombres de parámetros de ruta y cómo se accede a ellos
+
+2. **Errores de autorización**: Revisar:
+   - Correcta asociación entre usuario y recursos (ej: carrito)
+   - Implementación de middleware de propiedad
+   - Manejo adecuado de tokens JWT
 
 ## Licencia
 

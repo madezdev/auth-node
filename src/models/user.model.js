@@ -24,15 +24,38 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  previousPasswords: {
+    type: [String],
+    default: []
+  },
   cart: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Cart'
   },
   role: {
     type: String,
-    default: 'user',
-    enum: ['user', 'admin']
-  }
+    default: 'guest',
+    enum: ['guest', 'user', 'admin']
+  },
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String
+  },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  failedLoginAttempts: {
+    type: Number,
+    default: 0
+  },
+  accountLocked: {
+    type: Boolean,
+    default: false
+  },
+  accountLockedUntil: Date,
+  lastLoginAttempt: Date,
+  lastLoginIp: String
 }, {
   timestamps: true
 })
@@ -41,7 +64,8 @@ const userSchema = new mongoose.Schema({
 userSchema.pre('save', function (next) {
   if (!this.isModified('password')) return next()
 
-  const saltRounds = 10
+  // Aumentamos la seguridad del hash
+  const saltRounds = 12 // Incrementamos el costo del hashing
   this.password = bcrypt.hashSync(this.password, saltRounds)
   next()
 })
