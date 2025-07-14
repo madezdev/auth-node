@@ -10,7 +10,7 @@ import logger from '../config/logger.config.js'
 // Crear un nuevo administrador
 export const createAdmin = async (req, res) => {
   try {
-    const { first_name, last_name, email, age, password } = req.body
+    const { first_name, last_name, email, password, birthday, identifier, tax_identifier, phone } = req.body
 
     logger.debug(`Intento de creación de admin: ${email}`)
 
@@ -28,12 +28,15 @@ export const createAdmin = async (req, res) => {
       first_name,
       last_name,
       email,
-      age,
       password,
+      birthday,
+      identifier,
+      tax_identifier,
+      phone,
       cart: newCart.id,
       role: 'admin' // Set role to admin
     }
-    
+
     const newUser = await userRepository.createUser(userData)
 
     // Generate JWT token
@@ -70,7 +73,7 @@ export const createAdmin = async (req, res) => {
 // Registrar un nuevo usuario
 export const register = async (req, res) => {
   try {
-    const { first_name, last_name, email, age, password } = req.body
+    const { first_name, last_name, email, password, birthday, identifier, tax_identifier, phone } = req.body
 
     logger.debug(`Intento de registro: ${email}`)
 
@@ -88,12 +91,15 @@ export const register = async (req, res) => {
       first_name,
       last_name,
       email,
-      age,
       password,
+      birthday,
+      identifier,
+      tax_identifier,
+      phone,
       cart: newCart.id,
-      role: 'guest' // Default role for new users
+      role: 'user' // Default role for new users (cambiado de 'guest' a 'user')
     }
-    
+
     const newUser = await userRepository.createUser(userData)
 
     // Generate JWT token
@@ -147,7 +153,7 @@ export const login = async (req, res) => {
       logger.warn(`Intento de login con contraseña incorrecta: ${email}`)
       return res.status(401).json({ status: 'error', message: 'Invalid credentials' })
     }
-    
+
     // Verificar si el perfil está completo y actualizar el rol si es necesario
     await userRepository.checkAndUpdateUserRole(user._id)
 
@@ -217,13 +223,13 @@ export const getCurrentUser = async (req, res) => {
     const user = req.user
 
     logger.debug(`Solicitud de información del usuario actual: ${user.email}`)
-    
+
     // Verificar si el perfil está completo y actualizar el rol si es necesario
     await userRepository.checkAndUpdateUserRole(user._id)
-    
+
     // Obtener usuario actualizado con información completa
     const updatedUser = await userRepository.getCompleteUserByEmail(user.email)
-    
+
     // Crear DTO con información no sensible
     const userDTO = createCurrentUserDTO(updatedUser)
 
@@ -247,22 +253,22 @@ export const getCurrentUser = async (req, res) => {
 export const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({
         status: 'error',
         message: 'Email is required'
       });
     }
-    
+
     logger.debug(`Intento de recuperación de contraseña para: ${email}`);
-    
+
     // Generar base URL para el enlace de reset
     const baseUrl = `${req.protocol}://${req.get('host')}/api/sessions/reset-password`;
-    
+
     // Solicitar reset de contraseña
     const result = await passwordResetRepository.requestPasswordReset(email, baseUrl);
-    
+
     // Siempre devolvemos el mismo mensaje independientemente de si el usuario existe
     // para evitar fugas de información sobre usuarios registrados
     return res.status(200).json({
@@ -283,26 +289,26 @@ export const requestPasswordReset = async (req, res) => {
 export const validateResetToken = async (req, res) => {
   try {
     const { token } = req.params;
-    
+
     if (!token) {
       return res.status(400).json({
         status: 'error',
         message: 'Reset token is required'
       });
     }
-    
+
     logger.debug(`Validando token de reset: ${token}`);
-    
+
     // Validar token
     const result = await passwordResetRepository.validateResetToken(token);
-    
+
     if (!result.valid) {
       return res.status(400).json({
         status: 'error',
         message: result.message
       });
     }
-    
+
     return res.status(200).json({
       status: 'success',
       message: 'Token is valid',
@@ -324,26 +330,26 @@ export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
-    
+
     if (!token || !password) {
       return res.status(400).json({
         status: 'error',
         message: 'Reset token and new password are required'
       });
     }
-    
+
     logger.debug(`Intento de reset de contraseña con token: ${token}`);
-    
+
     // Resetear contraseña
     const result = await passwordResetRepository.resetPassword(token, password);
-    
+
     if (!result.success) {
       return res.status(400).json({
         status: 'error',
         message: result.message
       });
     }
-    
+
     return res.status(200).json({
       status: 'success',
       message: result.message

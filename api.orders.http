@@ -1,0 +1,69 @@
+### Variables globales
+@baseUrl = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2NDJiNTA4NzJhMTYwNGU0NWM5MCIsImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc1MDg4NTY3NywiZXhwIjoxNzUwOTcyMDc3fQ.8VmSZdAZbB9HWmSoNvVL-1JaqVdQ68Rg0y4NguJghMc
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2N2Q2NzYwOGZkMTJjN2EyYzBlZSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA4ODYzNTgsImV4cCI6MTc1MDk3Mjc1OH0.GmdISTzIkPX2-JqFKbizPm3vsE3AbomWbCOYTIfusjM
+
+@orderId = 6875a123456789abcdef1234
+
+### Crear una nueva orden
+POST {{baseUrl}}/api/orders HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cartItems": [
+    {
+      "product": {
+        "_id": "6875a123456789abcdef0001",
+        "name": "Smart TV 55\"",
+        "price": 1299
+      },
+      "quantity": 1
+    },
+    {
+      "product": {
+        "_id": "6875a123456789abcdef0002",
+        "name": "Wireless Headphones",
+        "price": 199
+      },
+      "quantity": 2
+    }
+  ],
+  "totalAmount": 1697,
+  "shippingAddress": {
+    "street": "123 Main St",
+    "city": "Buenos Aires",
+    "state": "CABA",
+    "postalCode": "1000",
+    "country": "Argentina"
+  },
+  "paymentInfo": {
+    "method": "credit_card",
+    "transactionId": "txn_123456789"
+  }
+}
+
+### Listar todas las órdenes (solo admin)
+GET {{baseUrl}}/api/orders HTTP/1.1
+Authorization: Bearer {{adminToken}}
+
+### Listar órdenes del usuario actual
+GET {{baseUrl}}/api/orders/user HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Obtener detalle de una orden específica
+GET {{baseUrl}}/api/orders/{{orderId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Actualizar estado de una orden (solo admin)
+PATCH {{baseUrl}}/api/orders/{{orderId}}/status HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "processing"
+}
+
+### Eliminar una orden (solo admin)
+DELETE {{baseUrl}}/api/orders/{{orderId}} HTTP/1.1
+Authorization: Bearer {{adminToken}}

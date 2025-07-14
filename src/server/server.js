@@ -13,6 +13,8 @@ import sessionRoutes from '../routes/session.routes.js'
 import userRoutes from '../routes/user.routes.js'
 import cartRoutes from '../routes/cart.routes.js'
 import productRoutes from '../routes/product.routes.js'
+import orderRoutes from '../routes/order.routes.js'
+import productQuestionRoutes from '../routes/product-question.routes.js'
 import logger from '../config/logger.config.js'
 
 // Inicializacion de express
@@ -51,6 +53,8 @@ if (process.env.NODE_ENV !== 'test') {
   app.use('/api/users', apiLimiter, userRoutes)
   app.use('/api/cart', apiLimiter, cartRoutes)
   app.use('/api/products', apiLimiter, productRoutes)
+  app.use('/api/orders', apiLimiter, orderRoutes)
+  app.use('/api/product-questions', apiLimiter, productQuestionRoutes)
   logger.info('API routes configured with rate limiters')
 } else {
   // En entorno de test, omitir limitadores de tasa
@@ -59,6 +63,8 @@ if (process.env.NODE_ENV !== 'test') {
   app.use('/api/users', userRoutes)
   app.use('/api/cart', cartRoutes)
   app.use('/api/products', productRoutes)
+  app.use('/api/orders', orderRoutes)
+  app.use('/api/product-questions', productQuestionRoutes)
   logger.debug('API routes configured for test environment')
 }
 
@@ -70,7 +76,11 @@ app.get('/', (req, res) => {
     message: 'Welcome to the API',
     endpoints: {
       sessions: '/api/sessions',
-      users: '/api/users'
+      users: '/api/users',
+      cart: '/api/cart',
+      products: '/api/products',
+      orders: '/api/orders',
+      productQuestions: '/api/product-questions'
     }
   })
 })
@@ -123,6 +133,10 @@ export class Server {
     // API routes con limitadores de tasa
     this.app.use('/api/sessions', authLimiter, sessionRoutes)
     this.app.use('/api/users', apiLimiter, userRoutes)
+    this.app.use('/api/cart', apiLimiter, cartRoutes)
+    this.app.use('/api/products', apiLimiter, productRoutes)
+    this.app.use('/api/orders', apiLimiter, orderRoutes)
+    this.app.use('/api/product-questions', apiLimiter, productQuestionRoutes)
     logger.info('API routes configured with rate limiters in Server instance')
 
     // Root route
@@ -133,7 +147,11 @@ export class Server {
         message: 'Welcome to the API',
         endpoints: {
           sessions: '/api/sessions',
-          users: '/api/users'
+          users: '/api/users',
+          cart: '/api/cart',
+          products: '/api/products',
+          orders: '/api/orders',
+          productQuestions: '/api/product-questions'
         }
       })
     })

@@ -1,5 +1,6 @@
-import { userRepository } from '../repositories/user.repository.js';
-import logger from '../config/logger.config.js';
+import { userRepository } from '../repositories/user.repository.js'
+import logger from '../config/logger.config.js'
+import { OrderDao } from '../daos/order.dao.js'
 
 /**
  * Role-based authorization middleware
@@ -176,3 +177,94 @@ export const productAdminMiddleware = () => {
     }
   };
 };
+
+/**
+ * General admin middleware
+ * Restricts access to admin users only
+ * 
+ * @returns {Function} Express middleware function
+ */
+export const adminMiddleware = () => {
+  return (req, res, next) => {
+    try {
+      // Check if user is an admin
+      if (req.user.role !== 'admin') {
+        logger.warn(`User ${req.user.email} with role ${req.user.role} attempted to access admin-only resource`);
+        return res.status(403).json({
+          status: 'error',
+          message: 'Forbidden: Only administrators can access this resource'
+        });
+      }
+
+      logger.info(`Admin user ${req.user.email} granted access to admin-only resource`);
+      next();
+    } catch (error) {
+      logger.error(`Error in admin middleware: ${error.message}`);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Internal server error during admin authorization'
+      });
+    }
+  };
+};
+
+/**
+ * Order ownership middleware
+ * Ensures users can only access their own orders unless they are admins
+ * 
+ * @returns {Function} Express middleware function
+ */
+export const orderOwnershipMiddleware = () => {
+  return async (req, res, next) => {
+    try {
+      // Get the order ID from params
+      const orderId = req.params.orderId;
+
+      if (!orderId) {
+        logger.warn('Order authorization failed: No order ID provided');
+        return res.status(400).json({
+          status: 'error',
+          message: 'Bad request: Order ID required'
+        });
+      }
+
+      // Allow admin access to any order
+      if (req.user.role === 'admin') {
+        logger.info(`Admin user ${req.user.email} granted access to order ${orderId}`);
+        return next();
+      }
+
+      // Get the order
+      const orderDao = new OrderDao();
+      const order = await orderDao.getById(orderId);
+
+      // Check if order exists
+      if (!order) {
+        logger.warn(`Order ${orderId} not found during authorization check`);
+        return res.status(404).json({
+          status: 'error',
+          message: 'Order not found'
+        });
+      }
+
+      // Check if user owns the order
+      if (order.user.toString() !== req.user._id.toString()) {
+        logger.warn(`User ${req.user.email} attempted to access order ${orderId} that belongs to user ${order.user}`);
+        return res.status(403).json({
+          status: 'error',
+          message: 'Forbidden: You can only access your own orders'
+        });
+      }
+
+      logger.info(`User ${req.user.email} granted access to their order ${orderId}`);
+      next();
+    } catch (error) {
+      logger.error(`Error in order ownership middleware: ${error.message}`);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Internal server error during order authorization'
+      });
+    }
+  };
+};
+

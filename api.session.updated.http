@@ -1,0 +1,48 @@
+### Variables globales
+@baseUrl = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2NDJiNTA4NzJhMTYwNGU0NWM5MCIsImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc1MDg4NTY3NywiZXhwIjoxNzUwOTcyMDc3fQ.8VmSZdAZbB9HWmSoNvVL-1JaqVdQ68Rg0y4NguJghMc
+
+### Registro de nuevo usuario (Modelo Actualizado)
+POST {{baseUrl}}/api/sessions/register
+Content-Type: application/json
+
+{
+  "first_name": "Juan",
+  "last_name": "Perez",
+  "email": "juan.perez@example.com",
+  "password": "password123",
+  "birthday": "1990-01-15",
+  "identifier": 12345678,
+  "tax_identifier": 98765432,
+  "phone": "+549111234567"
+}
+
+### Inicio de sesión (Usuario actualizado)
+# @name login
+POST {{baseUrl}}/api/sessions/login
+Content-Type: application/json
+
+{
+  "email": "juan.perez@example.com",
+  "password": "password123"
+}
+
+### Crear usuario administrador con modelo actualizado
+POST {{baseUrl}}/api/sessions/admin
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "first_name": "Admin",
+  "last_name": "NextJS",
+  "email": "admin.next@example.com",
+  "password": "adminpass123",
+  "birthday": "1985-05-20",
+  "identifier": 87654321,
+  "tax_identifier": 12345678,
+  "phone": "+549111987654"
+}
+
+### Obtener perfil del usuario actual (con campos actualizados)
+GET {{baseUrl}}/api/sessions/current
+Authorization: Bearer {{token}}

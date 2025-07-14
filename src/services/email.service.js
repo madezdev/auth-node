@@ -172,6 +172,99 @@ class EmailService {
       return false
     }
   }
+
+  /**
+   * Send order status update email
+   * @param {string} email - Recipient email
+   * @param {Object} order - Order object with updated status
+   * @returns {Promise<boolean>} Success status
+   */
+  async sendOrderStatusUpdate(email, order) {
+    try {
+      // Get status-specific content
+      let statusMessage = '';
+      let statusColor = '';
+      
+      switch (order.status) {
+        case 'pending':
+          statusMessage = 'Your order has been received and is pending processing.';
+          statusColor = '#FFA500'; // Orange
+          break;
+        case 'processing':
+          statusMessage = 'Good news! Your order is now being processed and prepared for shipping.';
+          statusColor = '#1E90FF'; // Blue
+          break;
+        case 'delivered':
+          statusMessage = 'Great news! Your order has been delivered. We hope you enjoy your purchase!';
+          statusColor = '#32CD32'; // Green
+          break;
+        case 'canceled':
+          statusMessage = 'Your order has been canceled. If you did not request this cancellation, please contact our support team.';
+          statusColor = '#DC143C'; // Red
+          break;
+        default:
+          statusMessage = `Your order status has been updated to: ${order.status}`;
+          statusColor = '#808080'; // Gray
+      }
+      
+      // Generate HTML for products
+      const productsHTML = order.products && order.products.length > 0
+        ? `
+          <h3>Order Items:</h3>
+          <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">
+            <tr>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Subtotal</th>
+            </tr>
+            ${order.products.map(item => `
+              <tr>
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+                <td>$${item.price.toFixed(2)}</td>
+                <td>$${(item.price * item.quantity).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </table>
+        `
+        : '';
+      
+      const mailOptions = {
+        from: `"E-commerce Support" <${config.EMAIL_USER}>`,
+        to: email,
+        subject: `Order Status Update: #${order.code} - ${order.status.toUpperCase()}`,
+        html: `
+          <h1>Order Status Update</h1>
+          <p>Order #: <strong>${order.code}</strong></p>
+          <p>Status: <span style="color: ${statusColor}; font-weight: bold; text-transform: uppercase;">${order.status}</span></p>
+          <p>${statusMessage}</p>
+          
+          ${productsHTML}
+          
+          <h3>Order Summary:</h3>
+          <p>Total: <strong>$${order.totalAmount.toFixed(2)}</strong></p>
+
+          ${order.status === 'delivered' ? `
+            <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+              <h3>We'd love your feedback!</h3>
+              <p>Please let us know how we did by rating your purchase experience.</p>
+            </div>
+          ` : ''}
+
+          <p>Thank you for shopping with us!</p>
+          <p>If you have any questions about your order, please contact our customer service.</p>
+        `
+      };
+
+      const info = await this.transporter.sendMail(mailOptions);
+      logger.info(`Order status update email sent to ${email}: ${info.messageId}`);
+      return true;
+    } catch (error) {
+      logger.error(`Error sending order status update email to ${email}: ${error.message}`, { stack: error.stack });
+      return false;
+    }
+  }
 }
 
 // Export a singleton instance

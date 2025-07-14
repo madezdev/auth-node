@@ -23,11 +23,15 @@ export const createUserDTO = (user) => {
     firstName: user.first_name,
     lastName: user.last_name,
     email: user.email,
-    age: user.age,
+    birthday: user.birthday,
+    identifier: user.identifier,
+    taxIdentifier: user.tax_identifier,
+    phone: user.phone,
     role: user.role,
     cart: user.cart?.toString(),
     createdAt: user.createdAt || user.created_at,
-    updatedAt: user.updatedAt || user.updated_at
+    updatedAt: user.updatedAt || user.updated_at,
+    lastConnection: user.last_connection
   };
 
   // Add address if it exists
@@ -78,7 +82,8 @@ export const createCurrentUserDTO = (user) => {
   const userDTO = createUserDTO(user);
   
   // Add profile completion flags
-  const userIsCompleted = !!(user.first_name && user.last_name && user.email && user.age);
+  const userIsCompleted = !!(user.first_name && user.last_name && user.email && user.phone);
+  const identificationIsCompleted = !!(user.identifier || user.tax_identifier);
   const addressIsCompleted = !!(
     user.address && 
     user.address.street && 
@@ -90,7 +95,8 @@ export const createCurrentUserDTO = (user) => {
   return {
     ...userDTO,
     userIsCompleted,
+    identificationIsCompleted,
     addressIsCompleted,
-    isProfileComplete: userIsCompleted && addressIsCompleted
+    isProfileComplete: userIsCompleted && identificationIsCompleted && addressIsCompleted
   };
 };
