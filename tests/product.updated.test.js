@@ -12,16 +12,41 @@ import { describe, test, expect, beforeAll, afterAll } from '@jest/globals'
 let adminToken = ''
 let testProductId = ''
 const testProduct = {
-  name: 'Test Product',
-  description: 'This is a test product',
-  price: 999,
+  title: 'Panel Solar 400W',
+  slug: 'panel-solar-400w',
+  description: 'Panel solar monocristalino de alta eficiencia',
+  brand: 'SolarTech',
+  model: 'ST-400M',
+  origin: 'China',
+  price: {
+    price: 999,
+    iva: 21,
+    isOffer: false
+  },
   stock: 50,
-  category: 'test'
+  category: 'fotovoltaico',
+  subCategory: 'panel_solar',
+  imagePath: ['https://example.com/images/panel-solar-400w.jpg'],
+  characteristic: {
+    potencia: '400W',
+    tipo: 'Monocristalino',
+    eficiencia: '21.3%',
+    dimensiones: '1755x1038x35mm',
+    peso: '19.5kg'
+  },
+  warranty: '25 años de garantía de rendimiento lineal',
+  tags: ['panel solar', 'monocristalino', '400w', 'energía renovable'],
+  system: ['on-grid', 'off-grid']
 }
+
 const updatedProduct = {
-  description: 'Updated description',
-  price: 1299,
-  stock: 75
+  description: 'Panel solar monocristalino de alta eficiencia actualizado',
+  price: {
+    price: 1099,
+    isOffer: true
+  },
+  stock: 75,
+  tags: ['panel solar', 'monocristalino', '400w', 'energía solar', 'oferta']
 }
 
 // Configurar base de datos de prueba
@@ -57,7 +82,7 @@ afterAll(async () => {
   await closeTestDB()
 }, 60000)
 
-describe('Product API Tests', () => {
+describe('Product API Tests (Updated Schema)', () => {
   describe('POST /api/products', () => {
     test('should create a new product when authenticated as admin', async () => {
       const response = await request(app)
@@ -69,7 +94,10 @@ describe('Product API Tests', () => {
       expect(response.body.status).toBe('success')
       expect(response.body.message).toBe('Producto creado exitosamente')
       expect(response.body.product).toHaveProperty('_id')
-      expect(response.body.product.name).toBe(testProduct.name)
+      expect(response.body.product.title).toBe(testProduct.title)
+      expect(response.body.product.slug).toBe(testProduct.slug)
+      expect(response.body.product.brand).toBe(testProduct.brand)
+      expect(response.body.product.price.price).toBe(testProduct.price.price)
 
       // Guardar ID para pruebas posteriores
       testProductId = response.body.product._id
@@ -89,7 +117,7 @@ describe('Product API Tests', () => {
         .post('/api/products')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          name: 'Incomplete Product'
+          title: 'Producto Incompleto'
           // Faltan campos obligatorios
         })
 
@@ -132,23 +160,40 @@ describe('Product API Tests', () => {
     test('should filter products by category', async () => {
       // Crear un producto con categoría específica para el test
       await ProductModel.create({
-        name: 'Category Test Product',
-        description: 'Product for category testing',
-        price: 500,
-        stock: 10,
-        category: 'special_category'
+        title: 'Batería de litio',
+        slug: 'bateria-de-litio',
+        description: 'Batería de litio para almacenamiento de energía',
+        brand: 'PowerBank',
+        model: 'PB-500',
+        origin: 'Alemania',
+        price: {
+          price: 2500,
+          iva: 21,
+          isOffer: false
+        },
+        stock: 15,
+        category: 'fotovoltaico',
+        subCategory: 'baterias',
+        imagePath: ['https://example.com/images/bateria.jpg'],
+        characteristic: {
+          capacidad: '5kWh',
+          tension: '48V',
+          ciclos: '5000'
+        }
       })
 
       const response = await request(app)
-        .get('/api/products?category=special_category')
+        .get('/api/products?category=fotovoltaico&subCategory=baterias')
 
       expect(response.status).toBe(200)
       expect(response.body.status).toBe('success')
       expect(Array.isArray(response.body.payload)).toBe(true)
+      expect(response.body.payload.length).toBeGreaterThan(0)
 
-      // Todos los productos devueltos deben tener la categoría solicitada
+      // Todos los productos devueltos deben tener la categoría y subcategoría solicitadas
       response.body.payload.forEach(product => {
-        expect(product.category).toBe('special_category')
+        expect(product.category).toBe('fotovoltaico')
+        expect(product.subCategory).toBe('baterias')
       })
     }, 30000)
 
@@ -157,17 +202,28 @@ describe('Product API Tests', () => {
       const productsToCreate = []
       for (let i = 0; i < 15; i++) {
         productsToCreate.push({
-          name: `Pagination Product ${i}`,
-          description: 'Product for pagination testing',
-          price: 100 + i,
-          stock: 5,
-          category: 'pagination'
+          title: `Inversor ${i}`,
+          slug: `inversor-${i}`,
+          description: `Inversor de prueba ${i}`,
+          brand: 'TestBrand',
+          model: `TB-${i}`,
+          origin: 'España',
+          price: {
+            price: 1000 + i * 50,
+            iva: 21,
+            isOffer: i % 3 === 0 // Cada tercer producto es oferta
+          },
+          stock: 10 + i,
+          category: 'fotovoltaico',
+          subCategory: 'inversor',
+          imagePath: [`https://example.com/images/inversor-${i}.jpg`]
         })
       }
+      
       await ProductModel.insertMany(productsToCreate)
-
+      
       const response = await request(app)
-        .get('/api/products?page=1&limit=10&category=pagination')
+        .get('/api/products?page=1&limit=10&category=fotovoltaico&subCategory=inversor')
 
       expect(response.status).toBe(200)
       expect(response.body.payload.length).toBeLessThanOrEqual(10)
@@ -187,14 +243,16 @@ describe('Product API Tests', () => {
 
         testProductId = createResponse.body.product._id
       }
-      
+
       const response = await request(app)
         .get(`/api/products/${testProductId}`)
 
       expect(response.status).toBe(200)
       expect(response.body.status).toBe('success')
       expect(response.body.product._id).toBe(testProductId)
-      expect(response.body.product.name).toBe(testProduct.name)
+      expect(response.body.product.title).toBe(testProduct.title)
+      expect(response.body.product.slug).toBe(testProduct.slug)
+      expect(response.body.product.price.price).toBe(testProduct.price.price)
     }, 30000)
 
     test('should return 404 for non-existent product', async () => {
@@ -207,7 +265,7 @@ describe('Product API Tests', () => {
       expect(response.body.message).toBe('Producto no encontrado')
     }, 30000)
 
-    test('should return 400 for invalid product id', async () => {
+    test('should return 400 for invalid ID format', async () => {
       const response = await request(app)
         .get('/api/products/invalid-id')
 
@@ -229,7 +287,7 @@ describe('Product API Tests', () => {
 
         testProductId = createResponse.body.product._id
       }
-      
+
       const response = await request(app)
         .put(`/api/products/${testProductId}`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -239,7 +297,10 @@ describe('Product API Tests', () => {
       expect(response.body.status).toBe('success')
       expect(response.body.message).toBe('Producto actualizado exitosamente')
       expect(response.body.product.description).toBe(updatedProduct.description)
-      expect(response.body.product.price).toBe(updatedProduct.price)
+      expect(response.body.product.price.price).toBe(updatedProduct.price.price)
+      expect(response.body.product.price.isOffer).toBe(updatedProduct.price.isOffer)
+      // El campo iva no debería haber cambiado porque no lo incluimos en la actualización
+      expect(response.body.product.price.iva).toBe(testProduct.price.iva)
     }, 30000)
 
     test('should return 401 when not authenticated', async () => {
@@ -253,7 +314,7 @@ describe('Product API Tests', () => {
 
         testProductId = createResponse.body.product._id
       }
-      
+
       const response = await request(app)
         .put(`/api/products/${testProductId}`)
         .send(updatedProduct)
@@ -279,11 +340,20 @@ describe('Product API Tests', () => {
     test('should delete a product when authenticated as admin', async () => {
       // Crear un producto específicamente para eliminar
       const productToDelete = await ProductModel.create({
-        name: 'Product to be deleted',
-        description: 'This product will be deleted in the test',
-        price: 1000,
+        title: 'Producto para eliminar',
+        slug: 'producto-para-eliminar',
+        description: 'Este producto será eliminado en el test',
+        brand: 'TestBrand',
+        model: 'TD-100',
+        origin: 'Argentina',
+        price: {
+          price: 1000,
+          iva: 21,
+          isOffer: false
+        },
         stock: 20,
-        category: 'test'
+        category: 'fotovoltaico',
+        imagePath: ['https://example.com/images/eliminar.jpg']
       })
       
       const deleteId = productToDelete._id.toString()
@@ -304,11 +374,20 @@ describe('Product API Tests', () => {
     test('should return 401 when not authenticated', async () => {
       // Crear un nuevo producto para la prueba
       const newProduct = await ProductModel.create({
-        name: 'Product for auth test',
-        description: 'This product is for testing authentication',
-        price: 500,
+        title: 'Producto para test de autenticación',
+        slug: 'producto-test-auth',
+        description: 'Este producto es para probar autenticación',
+        brand: 'TestBrand',
+        model: 'TA-100',
+        origin: 'Argentina',
+        price: {
+          price: 500,
+          iva: 21,
+          isOffer: false
+        },
         stock: 10,
-        category: 'test'
+        category: 'fotovoltaico',
+        imagePath: ['https://example.com/images/auth-test.jpg']
       })
 
       const response = await request(app)

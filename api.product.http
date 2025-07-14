@@ -1,8 +1,11 @@
 ### Variables globales
 @baseUrl = http://localhost:8080
-@token = {{loginAdmin.response.body.token}}
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2NDJiNTA4NzJhMTYwNGU0NWM5MCIsImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc1MDg4NTY3NywiZXhwIjoxNzUwOTcyMDc3fQ.8VmSZdAZbB9HWmSoNvVL-1JaqVdQ68Rg0y4NguJghMc
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2N2Q2NzYwOGZkMTJjN2EyYzBlZSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA4ODYzNTgsImV4cCI6MTc1MDk3Mjc1OH0.GmdISTzIkPX2-JqFKbizPm3vsE3AbomWbCOYTIfusjM
 
-### Login como admin para obtener token
+@productId = 685c6e287608fd12c7a2c0f3
+
+### Login como admin para obtener token (usar en caso de tokens expirados)
 # @name loginAdmin
 POST {{baseUrl}}/api/sessions/login
 Content-Type: application/json
@@ -12,19 +15,19 @@ Content-Type: application/json
   "password": "adminpass123"
 }
 
-### Obtener todos los productos
+### Obtener todos los productos (endpoint público)
 GET {{baseUrl}}/api/products
 
 ### Obtener todos los productos (con paginación y filtros)
 GET {{baseUrl}}/api/products?page=1&limit=5&category=electrónica&sort=price:desc
 
-### Obtener un producto por ID
+### Obtener un producto por ID (endpoint público)
 GET {{baseUrl}}/api/products/{{productId}}
 
 ### Crear un producto (requiere autenticación como admin)
 POST {{baseUrl}}/api/products
 Content-Type: application/json
-Authorization: Bearer {{token}}
+Authorization: Bearer {{adminToken}}
 
 {
   "name": "Producto de prueba",
@@ -38,7 +41,7 @@ Authorization: Bearer {{token}}
 ### Actualizar un producto (requiere autenticación como admin)
 PUT {{baseUrl}}/api/products/{{productId}}
 Content-Type: application/json
-Authorization: Bearer {{token}}
+Authorization: Bearer {{adminToken}}
 
 {
   "price": 1200,
@@ -48,4 +51,4 @@ Authorization: Bearer {{token}}
 
 ### Eliminar un producto (requiere autenticación como admin)
 DELETE {{baseUrl}}/api/products/{{productId}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{adminToken}}

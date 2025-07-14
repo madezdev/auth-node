@@ -1,0 +1,138 @@
+### Variables globales
+@baseUrl = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2NDJiNTA4NzJhMTYwNGU0NWM5MCIsImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc1MDg4NTY3NywiZXhwIjoxNzUwOTcyMDc3fQ.8VmSZdAZbB9HWmSoNvVL-1JaqVdQ68Rg0y4NguJghMc
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2N2Q2NzYwOGZkMTJjN2EyYzBlZSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA4ODYzNTgsImV4cCI6MTc1MDk3Mjc1OH0.GmdISTzIkPX2-JqFKbizPm3vsE3AbomWbCOYTIfusjM
+
+@productId = 6875a123456789abcdef1234
+@productSlug = panel-solar-400w
+
+### Crear un producto (modelo actualizado, solo admin)
+POST {{baseUrl}}/api/products HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Panel Solar 400W",
+  "slug": "panel-solar-400w",
+  "description": "Panel solar monocristalino de alta eficiencia",
+  "brand": "SolarTech",
+  "model": "ST-400M",
+  "origin": "China",
+  "price": {
+    "price": 999,
+    "iva": 21,
+    "isOffer": false
+  },
+  "stock": 50,
+  "category": "fotovoltaico",
+  "subCategory": "panel_solar",
+  "imagePath": [
+    "https://example.com/images/panel-solar-400w-1.jpg",
+    "https://example.com/images/panel-solar-400w-2.jpg"
+  ],
+  "characteristic": {
+    "potencia": "400W",
+    "tipo": "Monocristalino",
+    "eficiencia": "21.3%",
+    "dimensiones": "1755x1038x35mm",
+    "peso": "19.5kg"
+  },
+  "warranty": "25 años de garantía de rendimiento lineal",
+  "tags": ["panel solar", "monocristalino", "400w", "energía renovable"],
+  "system": ["on-grid", "off-grid"],
+  "outstanding": true
+}
+
+### Crear otro producto (categoría diferente)
+POST {{baseUrl}}/api/products HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Batería de Litio 48V 5kWh",
+  "slug": "bateria-litio-48v-5kwh",
+  "description": "Batería de litio para almacenamiento de energía solar",
+  "brand": "PowerBank",
+  "model": "PB-5000",
+  "origin": "Alemania",
+  "price": {
+    "price": 2500,
+    "iva": 21,
+    "isOffer": true
+  },
+  "stock": 15,
+  "category": "fotovoltaico",
+  "subCategory": "baterias",
+  "imagePath": ["https://example.com/images/bateria-litio.jpg"],
+  "characteristic": {
+    "capacidad": "5kWh",
+    "tension": "48V",
+    "ciclos": "5000",
+    "dimensiones": "450x320x170mm"
+  },
+  "warranty": "10 años o 6000 ciclos",
+  "tags": ["batería", "litio", "almacenamiento", "energía solar"]
+}
+
+### Listar todos los productos
+GET {{baseUrl}}/api/products HTTP/1.1
+
+### Listar productos con filtros (categoría, subcategoría)
+GET {{baseUrl}}/api/products?category=fotovoltaico&subCategory=panel_solar HTTP/1.1
+
+### Listar productos en oferta
+GET {{baseUrl}}/api/products?isOffer=true HTTP/1.1
+
+### Listar productos con búsqueda de texto
+GET {{baseUrl}}/api/products?search=panel%20solar HTTP/1.1
+
+### Listar productos con filtros de precio
+GET {{baseUrl}}/api/products?minPrice=500&maxPrice=2000 HTTP/1.1
+
+### Listar productos con ordenamiento (precio ascendente)
+GET {{baseUrl}}/api/products?sort=price.price:asc HTTP/1.1
+
+### Listar productos con paginación
+GET {{baseUrl}}/api/products?page=1&limit=5 HTTP/1.1
+
+### Obtener un producto por ID
+GET {{baseUrl}}/api/products/{{productId}} HTTP/1.1
+
+### Obtener un producto por slug
+GET {{baseUrl}}/api/products/{{productSlug}} HTTP/1.1
+
+### Actualizar un producto por ID (solo admin)
+PUT {{baseUrl}}/api/products/{{productId}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "description": "Panel solar monocristalino de alta eficiencia actualizado",
+  "price": {
+    "price": 899,
+    "isOffer": true
+  },
+  "stock": 75,
+  "tags": ["panel solar", "monocristalino", "400w", "energía solar", "oferta"]
+}
+
+### Actualizar un producto por slug (solo admin)
+PUT {{baseUrl}}/api/products/{{productSlug}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "description": "Panel solar monocristalino de alta eficiencia actualizado",
+  "price": {
+    "price": 899,
+    "isOffer": true
+  }
+}
+
+### Eliminar un producto por ID (solo admin)
+DELETE {{baseUrl}}/api/products/{{productId}} HTTP/1.1
+Authorization: Bearer {{adminToken}}
+
+### Eliminar un producto por slug (solo admin)
+DELETE {{baseUrl}}/api/products/{{productSlug}} HTTP/1.1
+Authorization: Bearer {{adminToken}}

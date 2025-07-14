@@ -1,0 +1,41 @@
+### Variables globales
+@baseUrl = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2NDJiNTA4NzJhMTYwNGU0NWM5MCIsImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc1MDg4NTY3NywiZXhwIjoxNzUwOTcyMDc3fQ.8VmSZdAZbB9HWmSoNvVL-1JaqVdQ68Rg0y4NguJghMc
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2N2Q2NzYwOGZkMTJjN2EyYzBlZSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA4ODYzNTgsImV4cCI6MTc1MDk3Mjc1OH0.GmdISTzIkPX2-JqFKbizPm3vsE3AbomWbCOYTIfusjM
+
+@productId = 6875a123456789abcdef1001
+@questionId = 6875a123456789abcdef2001
+
+### Crear una nueva pregunta sobre un producto
+POST {{baseUrl}}/api/product-questions HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "productId": "{{productId}}",
+  "question": "¿Este producto incluye garantía internacional?"
+}
+
+### Listar todas las preguntas para un producto específico (público)
+GET {{baseUrl}}/api/product-questions/product/{{productId}} HTTP/1.1
+
+### Listar preguntas del usuario autenticado
+GET {{baseUrl}}/api/product-questions/user HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Listar preguntas sin responder (solo admin)
+GET {{baseUrl}}/api/product-questions/unanswered HTTP/1.1
+Authorization: Bearer {{adminToken}}
+
+### Responder una pregunta (solo admin)
+POST {{baseUrl}}/api/product-questions/{{questionId}}/answer HTTP/1.1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "answer": "Sí, todos nuestros productos incluyen garantía internacional por 2 años."
+}
+
+### Eliminar una pregunta (solo admin)
+DELETE {{baseUrl}}/api/product-questions/{{questionId}} HTTP/1.1
+Authorization: Bearer {{adminToken}}

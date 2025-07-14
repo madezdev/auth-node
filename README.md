@@ -13,6 +13,9 @@ Un sistema de autenticación seguro con Node.js, Express y JWT.
 - Validación de datos de entrada
 - Gestión de permisos y roles de usuario
 - Sistema de logging avanzado con Winston
+- Recuperación de contraseña con tokens seguros
+- Carrito de compras con gestión de productos
+- Finalización de compras para usuarios autenticados
 
 ## Requisitos
 
@@ -148,6 +151,39 @@ auth-node/
 | GET | /api/users | Listar usuarios | Admin |
 | GET | /api/users/:id | Detalle de usuario | Admin o Propietario |
 | PUT | /api/users/:id | Actualizar usuario | Admin o Propietario |
+
+### Órdenes
+
+| Método | Ruta | Descripción | Permisos |
+|--------|------|-------------|----------|
+| POST | /api/orders | Crear una nueva orden | Autenticado |
+| GET | /api/orders | Listar todas las órdenes | Admin |
+| GET | /api/orders/user | Listar órdenes del usuario actual | Autenticado |
+| GET | /api/orders/:id | Detalle de una orden específica | Admin o Propietario |
+| PATCH | /api/orders/:id/status | Actualizar estado de una orden | Admin |
+| DELETE | /api/orders/:id | Eliminar una orden | Admin |
+
+### Carritos
+
+| Método | Ruta | Descripción | Permisos |
+|--------|------|-------------|----------|
+| POST | /api/cart | Crear un nuevo carrito | Autenticado |
+| GET | /api/cart/:id | Obtener un carrito por ID | Propietario |
+| POST | /api/cart/:id/products/:pid | Agregar producto al carrito | Propietario |
+| PUT | /api/cart/:id/products/:pid | Actualizar cantidad de producto | Propietario |
+| DELETE | /api/cart/:id/products/:pid | Eliminar producto del carrito | Propietario |
+| DELETE | /api/cart/:id | Vaciar carrito | Propietario |
+| POST | /api/cart/:id/purchase | Procesar compra del carrito | Propietario |
+
+### Preguntas de Productos
+
+| Método | Ruta | Descripción | Permisos |
+|--------|------|-------------|----------|
+| POST | /api/product-questions | Crear una nueva pregunta | Autenticado |
+| GET | /api/product-questions/product/:productId | Listar preguntas de un producto | Público |
+| GET | /api/product-questions/user | Listar preguntas del usuario actual | Autenticado |
+| GET | /api/product-questions/unanswered | Listar preguntas sin responder | Admin |
+| POST | /api/product-questions/:id/answer | Responder una pregunta | Admin |
 
 ## Recomendaciones de Seguridad Adicionales
 

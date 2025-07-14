@@ -5,7 +5,8 @@ import {
   updateUser,
   deleteUser
 } from '../controllers/user.controller.js'
-import { authenticateToken, authorizeRole } from '../middlewares/auth.middleware.js'
+import { authenticateToken } from '../middlewares/auth.middleware.js'
+import { userOwnershipMiddleware, roleAuthorization } from '../middlewares/authorization.middleware.js'
 
 const router = Router()
 
@@ -13,29 +14,15 @@ const router = Router()
 router.use(authenticateToken)
 
 // Obtener todos los usuarios (solo admin)
-router.get('/', authorizeRole(['admin']), getAllUsers)
+router.get('/', roleAuthorization(['admin']), getAllUsers)
 
 // Obtener usuario por ID (usuario puede ver su propio perfil, admin puede ver cualquier usuario)
-router.get('/:id', (req, res, next) => {
-  // Permite a los usuarios ver su propio perfil
-  if (req.user._id.toString() === req.params.id) {
-    return next()
-  }
-  // Para otros perfiles, solo los administradores pueden acceder.
-  return authorizeRole(['admin'])(req, res, next)
-}, getUserById)
+router.get('/:id', userOwnershipMiddleware(), getUserById)
 
 // Actualizar usuario (usuario puede actualizar su propio perfil, admin puede actualizar cualquier usuario)
-router.put('/:id', (req, res, next) => {
-  // Permite a los usuarios actualizar su propio perfil
-  if (req.user._id.toString() === req.params.id) {
-    return next()
-  }
-  // Para otros perfiles, solo los administradores pueden actualizar.
-  return authorizeRole(['admin'])(req, res, next)
-}, updateUser)
+router.put('/:id', userOwnershipMiddleware(), updateUser)
 
 // Eliminar usuario (solo admin)
-router.delete('/:id', authorizeRole(['admin']), deleteUser)
+router.delete('/:id', roleAuthorization(['admin']), deleteUser)
 
 export default router

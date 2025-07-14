@@ -1,0 +1,69 @@
+### Variables globales
+@baseUrl = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2NDJiNTA4NzJhMTYwNGU0NWM5MCIsImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20iLCJyb2xlIjoidXNlciIsImlhdCI6MTc1MDg4NTY3NywiZXhwIjoxNzUwOTcyMDc3fQ.8VmSZdAZbB9HWmSoNvVL-1JaqVdQ68Rg0y4NguJghMc
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NWM2N2Q2NzYwOGZkMTJjN2EyYzBlZSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA4ODYzNTgsImV4cCI6MTc1MDk3Mjc1OH0.GmdISTzIkPX2-JqFKbizPm3vsE3AbomWbCOYTIfusjM
+
+@userId = 685c671e7608fd12c7a2c0df
+@resetToken = your-password-reset-token
+
+### Registro de nuevo usuario
+POST {{baseUrl}}/api/sessions/register
+Content-Type: application/json
+
+{
+  "first_name": "Miguel",
+  "last_name": "Hernandez",
+  "email": "mh@example.com",
+  "age": 30,
+  "password": "password123"
+}
+
+### Inicio de sesión
+# @name login
+POST {{baseUrl}}/api/sessions/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "password": "password123"
+}
+
+### Crear usuario administrador (requiere autenticación como admin en producción)
+POST {{baseUrl}}/api/sessions/admin
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "first_name": "Admin",
+  "last_name": "User",
+  "email": "newadmin@example.com",
+  "age": 35,
+  "password": "adminpass123"
+}
+
+### Obtener perfil del usuario actual
+GET {{baseUrl}}/api/sessions/current
+Authorization: Bearer {{token}}
+
+### Cerrar sesión
+GET {{baseUrl}}/api/sessions/logout
+
+### Solicitar restablecimiento de contraseña
+POST {{baseUrl}}/api/sessions/forgot-password
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com"
+}
+
+### Validar token de restablecimiento de contraseña
+GET {{baseUrl}}/api/sessions/reset-password/{{resetToken}}/validate
+
+### Restablecer contraseña
+POST {{baseUrl}}/api/sessions/reset-password/{{resetToken}}
+Content-Type: application/json
+
+{
+  "password": "new-password123",
+  "confirmPassword": "new-password123"
+}

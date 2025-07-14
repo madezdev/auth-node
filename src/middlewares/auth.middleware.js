@@ -68,14 +68,26 @@ export const authenticateToken = (req, res, next) => {
 
     // CASO 5: RUTAS CRUD DE USUARIOS - Requieren autenticación admin
     if (url.includes('/api/users')) {
-      // Simular usuario admin para tests de operaciones de usuario
-      req.user = {
-        _id: '000000000000000000000002',
-        email: 'admin@test.com',
-        role: 'admin',
-        toString: () => '000000000000000000000002'
+      // Verificar si se solicita simular un usuario regular con el header x-test-role
+      if (req.headers['x-test-role'] === 'user') {
+        // Simular usuario regular para probar la restricción de roles
+        req.user = {
+          _id: '000000000000000000000003',
+          email: 'regular.user@test.com',
+          role: 'user',
+          toString: () => '000000000000000000000003'
+        }
+        logger.debug('User CRUD route - Using regular user due to x-test-role header')
+      } else {
+        // Por defecto, simular usuario admin para tests de operaciones de usuario
+        req.user = {
+          _id: '000000000000000000000002',
+          email: 'admin@test.com',
+          role: 'admin',
+          toString: () => '000000000000000000000002'
+        }
+        logger.debug('User CRUD route - Using admin user')
       }
-      logger.debug('User CRUD route - Using admin user')
       return next()
     }
 
@@ -125,21 +137,20 @@ export const authenticateToken = (req, res, next) => {
 // Middleware de autorización para verificar el rol del usuario
 export const authorizeRole = (roles) => {
   return (req, res, next) => {
-    // Si estamos en entorno de prueba y la ruta pertenece a user o sessions, simulamos admin
+    // Si estamos en entorno de prueba, evaluamos los roles basados en el usuario ya configurado
+    // La asignación de usuario ya se ha hecho en authenticateToken para el entorno de prueba
     if (process.env.NODE_ENV === 'test') {
-      const url = req.originalUrl || ''
-
-      // Para pruebas específicas donde queremos simular restricción de roles
-      if (url.includes('/api/users') && req.headers['x-test-role'] === 'user') {
-        logger.debug('Test environment - simulating forbidden access for regular users')
+      // Verificar si el usuario tiene el rol requerido
+      if (!req.user || !roles.includes(req.user.role)) {
+        logger.debug(`Test environment - forbidden access for user with role: ${req.user?.role}, required roles: ${roles.join(', ')}`)
         return res.status(403).json({
           status: 'error',
           message: 'Forbidden: Insufficient permissions'
         })
       }
-
-      // Para las demás rutas en tests, permitimos acceso
-      logger.debug('Test environment - bypassing role authorization')
+      
+      // El usuario tiene el rol adecuado, permitimos el acceso
+      logger.debug(`Test environment - authorized access for user with role: ${req.user.role}`)
       return next()
     }
 

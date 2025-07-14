@@ -2,24 +2,44 @@ import mongoose from 'mongoose'
 import bcrypt from 'bcrypt'
 
 const userSchema = new mongoose.Schema({
+  // Campos requeridos por la interfaz de NextJS
   first_name: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   last_name: {
     type: String,
+    required: true,
+    trim: true
+  },
+  birthday: {
+    type: Date,
+    required: true
+  },
+  identifier: {
+    type: Number,
+    required: true
+  },
+  tax_identifier: {
+    type: Number,
     required: true
   },
   email: {
     type: String,
     required: true,
     unique: true,
-    match: [/.+@.+\..+/, 'Please use a valid email address']
+    trim: true,
+    lowercase: true,
+    match: [/.+@.+\..+/, 'Por favor ingrese un email válido']
   },
-  age: {
-    type: Number,
-    required: true
+  phone: {
+    type: String,
+    required: true,
+    trim: true
   },
+
+  // Campos adicionales necesarios para el sistema
   password: {
     type: String,
     required: true
@@ -31,7 +51,15 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     default: 'user',
-    enum: ['user', 'admin']
+    enum: ['guest', 'user', 'admin']
+  },
+  active: {
+    type: Boolean,
+    default: true
+  },
+  last_connection: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true
