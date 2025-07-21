@@ -60,13 +60,32 @@ const orderSchema = new mongoose.Schema({
       min: 1
     }
   }],
-  // Shipping address
+  // Shipping address following the required interface
   shippingAddress: {
-    street: String,
-    city: String,
-    state: String,
-    postalCode: String,
-    country: String
+    state: {
+      type: String,
+      required: true
+    },
+    street: {
+      type: String,
+      required: true
+    },
+    postal_code: {
+      type: String,
+      required: true
+    },
+    country: {
+      type: String,
+      required: true
+    },
+    apt: {
+      type: Number,
+      required: false
+    },
+    locality: {
+      type: String,
+      required: true
+    }
   },
   // Payment information (minimal - could expand based on needs)
   paymentInfo: {
@@ -89,9 +108,9 @@ const orderSchema = new mongoose.Schema({
 // Pre-save hook to track status changes
 orderSchema.pre('save', function (next) {
   if (this.isModified('status')) {
-    this.previousStatus = this.status;
+    this.previousStatus = this.status
   }
-  next();
+  next()
 })
 
 export const OrderModel = mongoose.model('Order', orderSchema)

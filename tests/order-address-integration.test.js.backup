@@ -1,0 +1,475 @@
+import request from 'supertest'
+import { app } from '../src/server/server.js'
+import { UserModel } from '../src/models/user.model.js'
+import { ShippingAddressModel } from '../src/models/shipping-address.model.js'
+import { OrderModel } from '../src/models/order.model.js'
+import { ProductModel } from '../src/models/product.model.js'
+import { CartModel } from '../src/models/cart.model.js'
+import { beforeAll, afterAll, beforeEach, afterEach, describe, test, expect } from '@jest/globals'
+import { setupTestDB, closeTestDB } from './setup.js'
+
+// Test user data
+const testUser = {
+  first_name: 'Order',
+  last_name: 'Tester',
+  email: 'order.tester@test.com',
+  age: 30,
+  password: 'password123',
+  role: 'guest', // Iniciamos como 'guest' para probar la promoción a 'user'
+  phone: '+1234567890',
+  identifier: 12345,
+  tax_identifier: 54321,
+  birthday: new Date('1990-01-01')
+}
+
+// Test admin data
+const testAdmin = {
+  first_name: 'Admin',
+  last_name: 'Order',
+  email: 'admin.order@test.com',
+  age: 35,
+  password: 'admin123',
+  role: 'admin',
+  phone: '+1987654321',
+  identifier: 123456,
+  tax_identifier: 654321,
+  birthday: new Date('1985-05-05')
+}
+
+// Test address data
+const testAddress = {
+  state: 'California',
+  street: '123 Main St',
+  postalCode: '90001',
+  country: 'USA',
+  apt: 101,
+  locality: 'Los Angeles',
+  details: 'Near the park',
+  isDefault: true
+}
+
+// Test product data
+const testProduct = {
+  title: 'Test Product',
+  description: 'A product for testing',
+  price: {
+    price: 29.99,
+    iva: 21,
+    isOffer: false
+  },
+  stock: 100,
+  category: 'other',
+  subCategory: 'otros',
+  imagePath: ['https://example.com/test.jpg'],
+  brand: 'Test Brand',
+  model: 'Test Model',
+  origin: 'Test Origin',
+  slug: 'test-product-' + Date.now(),
+  active: true
+}
+
+let userToken
+let adminToken
+let userId
+let adminId
+let productId
+let defaultAddressId
+let secondaryAddressId
+let cartId
+
+describe('Order and Shipping Address Integration Tests', () => {
+  // Configure test environment
+  beforeAll(async () => {
+    // Setup test database
+    await setupTestDB()
+    
+    // Clean collections
+    await UserModel.deleteMany({})
+    await ShippingAddressModel.deleteMany({})
+    await OrderModel.deleteMany({})
+    await ProductModel.deleteMany({})
+    await CartModel.deleteMany({})
+    
+    // Create test product
+    const product = await ProductModel.create(testProduct)
+    productId = product._id.toString()
+  }, 60000)
+
+  afterAll(async () => {
+    await closeTestDB()
+  }, 60000)
+
+  // Create test users and setup data before each test suite
+  beforeEach(async () => {
+    // Create test user
+    const user = await UserModel.create({
+      first_name: testUser.first_name,
+      last_name: testUser.last_name,
+      email: testUser.email,
+      age: testUser.age,
+      password: testUser.password,
+      phone: testUser.phone,
+      identifier: testUser.identifier,
+      tax_identifier: testUser.tax_identifier,
+      birthday: testUser.birthday,
+      role: testUser.role
+    })
+    userId = user._id.toString()
+
+    // Create admin user
+    const admin = await UserModel.create({
+      first_name: testAdmin.first_name,
+      last_name: testAdmin.last_name,
+      email: testAdmin.email,
+      age: testAdmin.age,
+      password: testAdmin.password,
+      phone: testAdmin.phone,
+      identifier: testAdmin.identifier,
+      tax_identifier: testAdmin.tax_identifier,
+      birthday: testAdmin.birthday,
+      role: testAdmin.role
+    })
+    adminId = admin._id.toString()
+
+    // Login as test user
+    const userLoginResponse = await request(app)
+      .post('/api/sessions/login')
+      .send({
+        email: testUser.email,
+        password: testUser.password
+      })
+    userToken = userLoginResponse.body.token
+
+    // Login as admin
+    const adminLoginResponse = await request(app)
+      .post('/api/sessions/login')
+      .send({
+        email: testAdmin.email,
+        password: testAdmin.password
+      })
+    adminToken = adminLoginResponse.body.token
+    
+    // Create default shipping address
+    const defaultAddressResponse = await request(app)
+      .post('/api/shipping-addresses')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({
+        ...testAddress,
+        isDefault: true
+      })
+    defaultAddressId = defaultAddressResponse.body.payload.id
+    
+    // Create secondary shipping address
+    const secondaryAddressResponse = await request(app)
+      .post('/api/shipping-addresses')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({
+        ...testAddress,
+        street: '456 Second St',
+        isDefault: false
+      })
+    secondaryAddressId = secondaryAddressResponse.body.payload.id
+    
+    // Create a cart for the user
+    const cart = new CartModel({ user: userId })
+    await cart.save()
+    cartId = cart._id.toString()
+  }, 30000)
+
+  // Clean up after each test
+  afterEach(async () => {
+    await UserModel.deleteMany({})
+    await ShippingAddressModel.deleteMany({})
+    await OrderModel.deleteMany({})
+    await CartModel.deleteMany({})
+  }, 30000)
+
+  describe('Order Creation with Shipping Address', () => {
+    test('should create order with default shipping address', async () => {
+      const orderData = {
+        cartItems: [{
+          product: {
+            _id: productId,
+            name: testProduct.title,
+            price: testProduct.price.price
+          },
+          quantity: 2
+        }],
+        totalAmount: testProduct.price.price * 2,
+        paymentInfo: {
+          method: 'credit_card',
+          transactionId: 'test123'
+        }
+      }
+      
+      const response = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(orderData)
+        .expect(201)
+      
+      expect(response.body).toHaveProperty('status', 'success')
+      expect(response.body).toHaveProperty('payload')
+      expect(response.body.payload).toHaveProperty('shippingAddress')
+      
+      // Verify order was created with the default address
+      const order = await OrderModel.findById(response.body.payload.id).lean()
+      expect(order.shippingAddress.street).toBe(testAddress.street)
+    }, 30000)
+    
+    test('should create order with specified shipping address', async () => {
+      const orderData = {
+        cartItems: [{
+          product: {
+            _id: product: { _id: productId, name: testProduct.title, price: testProduct.price.price },
+            name: testProduct.title,
+            }
+          },
+          quantity: 1
+        }],
+        totalAmount: testProduct.price.price,
+        shippingAddressId: secondaryAddressId,
+        paymentInfo: {
+          method: 'credit_card',
+          transactionId: 'test456'
+        }
+      }
+      
+      const response = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(orderData)
+        .expect(201)
+      
+      expect(response.body).toHaveProperty('status', 'success')
+      expect(response.body).toHaveProperty('payload')
+      expect(response.body.payload).toHaveProperty('shippingAddress')
+      
+      // Verify the order was created with the secondary address
+      const order = await OrderModel.findById(response.body.payload.id).lean()
+      expect(order.shippingAddress.street).toBe('456 Second St')
+    }, 30000)
+    
+    test('should reject order with non-existent shipping address', async () => {
+      const orderData = {
+        cartItems: [{
+          product: { _id: productId, name: testProduct.title, price: testProduct.price.price },
+          quantity: 1
+          }
+        }],
+        totalAmount: testProduct.price.price,
+        shippingAddressId: '6500000000000000000a1234', // Non-existent ID
+        paymentInfo: {
+          method: 'credit_card',
+          transactionId: 'test789'
+        }
+      }
+      
+      await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(orderData)
+        .expect(400) // Bad Request - La dirección no existe
+    }, 30000)
+    
+    test('should reject order with shipping address owned by another user', async () => {
+      // Create another user with their own address
+      const otherUser = await UserModel.create({
+        first_name: 'Other',
+        last_name: 'User',
+        email: `other.user.${Date.now()}@test.com`,
+        age: 28,
+        password: 'password456',
+        role: 'guest',
+        phone: '+1234567890',
+        identifier: 987654,
+        tax_identifier: 456789,
+        birthday: new Date('1995-01-01')
+      })
+      
+      // Login with other user to create an address
+      const otherLoginResponse = await request(app)
+        .post('/api/sessions/login')
+        .send({
+          email: otherUser.email,
+          password: 'password456'
+        })
+      
+      const otherToken = otherLoginResponse.body.token
+      
+      // Create address for other user
+      const otherAddressResponse = await request(app)
+        .post('/api/shipping-addresses')
+        .set('Authorization', `Bearer ${otherToken}`)
+        .send({
+          ...testAddress,
+          street: '789 Other St'
+        })
+      
+      const otherAddressId = otherAddressResponse.body.address._id
+      
+      // Try to create order with original user but using other user's address
+      const orderData = {
+        cartItems: [{
+          product: {
+            _id: productId,
+            name: testProduct.title,
+            price: testProduct.price.price
+          },
+          quantity: 1
+        }],
+        totalAmount: testProduct.price.price,
+        shippingAddressId: otherAddressId,
+        paymentInfo: {
+          method: 'credit_card',
+          transactionId: 'testInvalid'
+        }
+      }
+      
+      await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(orderData)
+        .expect(400) // Bad Request - No se permite usar dirección de otro usuario
+    }, 30000)
+  })
+  
+  describe('Order Response Format', () => {
+    test('should return order with camelCase shipping address format', async () => {
+      // Create order
+      const orderData = {
+        cartItems: [{
+          product: {
+            _id: product: { _id: productId, name: testProduct.title, price: testProduct.price.price },
+            name: testProduct.title,
+            }
+          },
+          quantity: 1
+        }],
+        totalAmount: testProduct.price.price,
+        paymentInfo: {
+          method: 'credit_card',
+          transactionId: 'testCamel'
+        }
+      }
+      
+      const createOrderResponse = await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(orderData)
+      
+      const orderId = createOrderResponse.body.payload.id
+      
+      // Get order details
+      const response = await request(app)
+        .get(`/api/orders/${orderId}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(200)
+      
+      expect(response.body).toHaveProperty('status', 'success')
+      expect(response.body).toHaveProperty('payload')
+      
+      // Verify shipping address is in camelCase format (frontend format)
+      expect(response.body.payload).toHaveProperty('shippingAddress')
+      expect(response.body.payload.shippingAddress).toHaveProperty('postalCode')
+      expect(response.body.payload.shippingAddress).not.toHaveProperty('postal_code')
+      expect(response.body.payload.shippingAddress).toHaveProperty('isDefault')
+      expect(response.body.payload.shippingAddress).not.toHaveProperty('is_default')
+    }, 30000)
+    
+    test('should return all orders with camelCase shipping address format', async () => {
+      // Create order
+      const orderData = {
+        cartItems: [{
+          product: { _id: productId, name: testProduct.title, price: testProduct.price.price },
+          quantity: 1
+          }
+        }],
+        totalAmount: testProduct.price.price,
+        paymentInfo: {
+          method: 'credit_card',
+          transactionId: 'testAll'
+        }
+      }
+      
+      await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send(orderData)
+      
+      // Get all orders
+      const response = await request(app)
+        .get('/api/orders')
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(200)
+      
+      expect(response.body).toHaveProperty('status', 'success')
+      expect(response.body).toHaveProperty('payload')
+      expect(Array.isArray(response.body.payload)).toBe(true)
+      expect(response.body.payload.length).toBeGreaterThan(0)
+      
+      // Verify first order has shipping address in camelCase format
+      expect(response.body.payload[0]).toHaveProperty('shippingAddress')
+      expect(response.body.payload[0].shippingAddress).toHaveProperty('postalCode')
+      expect(response.body.payload[0].shippingAddress).not.toHaveProperty('postal_code')
+    }, 30000)
+  })
+  
+  describe('User Role Promotion', () => {
+    test('should promote user to "user" role after order creation', async () => {
+      // Create a new user with guest role
+      const newGuestUser = await UserModel.create({
+        first_name: 'New',
+        last_name: 'Guest',
+        email: `new.guest.${Date.now()}@test.com`,
+        age: 25,
+        password: 'guestpass',
+        role: 'guest'
+      })
+      
+      // Login as new guest user
+      const guestLoginResponse = await request(app)
+        .post('/api/sessions/login')
+        .send({
+          email: newGuestUser.email,
+          password: 'guestpass'
+        })
+      
+      const guestToken = guestLoginResponse.body.token
+      
+      // Create address for guest user
+      const guestAddressResponse = await request(app)
+        .post('/api/shipping-addresses')
+        .set('Authorization', `Bearer ${guestToken}`)
+        .send(testAddress)
+      
+      // Create cart for guest user
+      const guestCart = new CartModel({ user: newGuestUser._id })
+      await guestCart.save()
+      
+      // Create order for guest user
+      const orderData = {
+        cartItems: [{
+          product: { _id: productId, name: testProduct.title, price: testProduct.price.price },
+          quantity: 1
+          }
+        }],
+        totalAmount: testProduct.price.price,
+        paymentInfo: {
+          method: 'credit_card',
+          transactionId: 'guestOrder'
+        }
+      }
+      
+      await request(app)
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${guestToken}`)
+        .send(orderData)
+        .expect(201)
+      
+      // Verify user role has been promoted from guest to user
+      const updatedUser = await UserModel.findById(newGuestUser._id)
+      expect(updatedUser.role).toBe('user')
+    }, 30000)
+  })
+})

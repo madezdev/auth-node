@@ -1,14 +1,13 @@
 import dotenv from 'dotenv'
 import mongoose from 'mongoose'
-import secureConfig from './secure-config.js'
 dotenv.config()
 
 const dbConnection = async () => {
   try {
-    const uri = process.env.MONGODB_URI || secureConfig.MONGODB_URI
+    const uri = process.env.MONGODB_URI
     if (!uri) {
       throw new Error(
-        'MONGODB_URI no está definida en las variables de entorno ni en secure-config'
+        'MONGODB_URI no está definida en las variables de entorno'
       )
     }
 
@@ -23,6 +22,6 @@ const dbConnection = async () => {
 
 export default {
   PORT: process.env.PORT || 3000,
-  SECRET: process.env.SECRET || secureConfig.JWT_SECRET,
+  SECRET: process.env.JWT_SECRET,
   dbConnection
 }

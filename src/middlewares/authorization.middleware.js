@@ -69,7 +69,7 @@ export const cartOwnershipMiddleware = () => {
       }
 
       // Get user with cart information
-      const user = await userRepository.getUserById(req.user._id);
+      const user = await userRepository.getUserById(req.user.id);
 
       // Handle cases where user has no cart assigned
       if (!user || !user.cart) {
@@ -248,7 +248,7 @@ export const orderOwnershipMiddleware = () => {
       }
 
       // Check if user owns the order
-      if (order.user.toString() !== req.user._id.toString()) {
+      if (order.user.toString() !== req.user.id) {
         logger.warn(`User ${req.user.email} attempted to access order ${orderId} that belongs to user ${order.user}`);
         return res.status(403).json({
           status: 'error',

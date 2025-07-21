@@ -97,7 +97,7 @@ export const register = async (req, res) => {
       tax_identifier,
       phone,
       cart: newCart.id,
-      role: 'user' // Default role for new users (cambiado de 'guest' a 'user')
+      role: 'guest' // Default role for new users (esto permitirá la promoción automática a 'user')
     }
 
     const newUser = await userRepository.createUser(userData)

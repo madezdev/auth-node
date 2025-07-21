@@ -15,6 +15,7 @@ import cartRoutes from '../routes/cart.routes.js'
 import productRoutes from '../routes/product.routes.js'
 import orderRoutes from '../routes/order.routes.js'
 import productQuestionRoutes from '../routes/product-question.routes.js'
+import shippingAddressRoutes from '../routes/shipping-address.router.js'
 import logger from '../config/logger.config.js'
 
 // Inicializacion de express
@@ -55,6 +56,7 @@ if (process.env.NODE_ENV !== 'test') {
   app.use('/api/products', apiLimiter, productRoutes)
   app.use('/api/orders', apiLimiter, orderRoutes)
   app.use('/api/product-questions', apiLimiter, productQuestionRoutes)
+  app.use('/api/shipping-addresses', apiLimiter, shippingAddressRoutes)
   logger.info('API routes configured with rate limiters')
 } else {
   // En entorno de test, omitir limitadores de tasa
@@ -65,6 +67,7 @@ if (process.env.NODE_ENV !== 'test') {
   app.use('/api/products', productRoutes)
   app.use('/api/orders', orderRoutes)
   app.use('/api/product-questions', productQuestionRoutes)
+  app.use('/api/shipping-addresses', shippingAddressRoutes)
   logger.debug('API routes configured for test environment')
 }
 
@@ -80,7 +83,8 @@ app.get('/', (req, res) => {
       cart: '/api/cart',
       products: '/api/products',
       orders: '/api/orders',
-      productQuestions: '/api/product-questions'
+      productQuestions: '/api/product-questions',
+      shippingAddresses: '/api/shipping-addresses'
     }
   })
 })
@@ -137,6 +141,7 @@ export class Server {
     this.app.use('/api/products', apiLimiter, productRoutes)
     this.app.use('/api/orders', apiLimiter, orderRoutes)
     this.app.use('/api/product-questions', apiLimiter, productQuestionRoutes)
+    this.app.use('/api/shipping-addresses', apiLimiter, shippingAddressRoutes)
     logger.info('API routes configured with rate limiters in Server instance')
 
     // Root route
@@ -151,7 +156,8 @@ export class Server {
           cart: '/api/cart',
           products: '/api/products',
           orders: '/api/orders',
-          productQuestions: '/api/product-questions'
+          productQuestions: '/api/product-questions',
+          shippingAddresses: '/api/shipping-addresses'
         }
       })
     })

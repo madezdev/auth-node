@@ -7,6 +7,7 @@ import { ProductQuestionModel } from '../src/models/product-question.model.js'
 import jwt from 'jsonwebtoken'
 import config from '../src/config/index.js'
 import { describe, test, expect, beforeAll, afterAll } from '@jest/globals'
+import { createTestUser, createTestAdmin, createTestProduct, createUniqueEmail, createUniqueSlug } from './helpers/test-data.js'
 
 // Variables para almacenar datos entre pruebas
 let adminToken = ''
@@ -17,31 +18,21 @@ let adminId = ''
 let userId = ''
 
 // Datos para pruebas
-const testUser = {
-  first_name: 'Regular',
-  last_name: 'User',
-  email: 'user@test.com',
-  age: 25,
-  password: 'testpassword',
+const testUser = createTestUser({
+  email: createUniqueEmail('user'),
   role: 'user'
-}
+})
 
-const testAdmin = {
-  first_name: 'Admin',
-  last_name: 'User',
-  email: 'admin@test.com',
-  age: 30,
-  password: 'testpassword',
+const testAdmin = createTestAdmin({
+  email: createUniqueEmail('admin'),
   role: 'admin'
-}
+})
 
-const testProduct = {
-  name: 'Test Product',
-  description: 'This is a test product for question tests',
-  price: 999,
-  stock: 50,
-  category: 'test'
-}
+const testProduct = createTestProduct({
+  slug: createUniqueSlug('question-test'),
+  title: 'Test Product for Questions',
+  description: 'This is a test product for question tests'
+})
 
 const testQuestion = {
   question: 'Is this product compatible with my device?'
@@ -89,9 +80,13 @@ beforeAll(async () => {
 
 // Limpiar base de datos después de todas las pruebas
 afterAll(async () => {
-  await UserModel.deleteMany({})
-  await ProductModel.deleteMany({})
-  await ProductQuestionModel.deleteMany({})
+  try {
+    await UserModel.deleteMany({})
+    await ProductModel.deleteMany({})
+    await ProductQuestionModel.deleteMany({})
+  } catch (error) {
+    console.log('Error cleaning up test data:', error.message)
+  }
   await closeTestDB()
 }, 60000)
 
@@ -108,12 +103,12 @@ describe('Product Question API Tests', () => {
 
       expect(response.status).toBe(201)
       expect(response.body.status).toBe('success')
-      expect(response.body.payload).toHaveProperty('_id')
+      expect(response.body.payload).toHaveProperty('id')
       expect(response.body.payload).toHaveProperty('question')
       expect(response.body.payload.question).toBe(testQuestion.question)
 
       // Guardar ID para pruebas posteriores
-      testQuestionId = response.body.payload._id
+      testQuestionId = response.body.payload.id
     }, 30000)
 
     test('should return 401 when not authenticated', async () => {
@@ -154,7 +149,7 @@ describe('Product Question API Tests', () => {
             question: testQuestion.question
           })
 
-        testQuestionId = createResponse.body.payload._id
+        testQuestionId = createResponse.body.payload.id
       }
 
       const response = await request(app)
@@ -179,7 +174,7 @@ describe('Product Question API Tests', () => {
             question: testQuestion.question
           })
 
-        testQuestionId = createResponse.body.payload._id
+        testQuestionId = createResponse.body.payload.id
       }
 
       const response = await request(app)
@@ -213,7 +208,7 @@ describe('Product Question API Tests', () => {
             question: testQuestion.question
           })
 
-        testQuestionId = createResponse.body.payload._id
+        testQuestionId = createResponse.body.payload.id
       }
 
       const response = await request(app)
@@ -254,7 +249,7 @@ describe('Product Question API Tests', () => {
             question: testQuestion.question
           })
 
-        testQuestionId = createResponse.body.payload._id
+        testQuestionId = createResponse.body.payload.id
       }
 
       const response = await request(app)
@@ -267,7 +262,7 @@ describe('Product Question API Tests', () => {
       expect(response.body.payload).toHaveProperty('answer')
       expect(response.body.payload.answer).toBe(testAnswer.answer)
       expect(response.body.payload).toHaveProperty('answeredBy')
-      expect(response.body.payload).toHaveProperty('answeredAt')
+      expect(response.body.payload.isAnswered).toBe(true)
     }, 30000)
 
     test('should deny access to regular users', async () => {
@@ -281,7 +276,7 @@ describe('Product Question API Tests', () => {
             question: testQuestion.question
           })
 
-        testQuestionId = createResponse.body.payload._id
+        testQuestionId = createResponse.body.payload.id
       }
 
       const response = await request(app)
@@ -304,7 +299,7 @@ describe('Product Question API Tests', () => {
             question: testQuestion.question
           })
 
-        testQuestionId = createResponse.body.payload._id
+        testQuestionId = createResponse.body.payload.id
       }
 
       const response = await request(app)

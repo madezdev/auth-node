@@ -11,7 +11,10 @@ const testUser = {
   first_name: 'Cart',
   last_name: 'Tester',
   email: 'cart.tester@test.com',
-  age: 30,
+  birthday: new Date('1990-01-01'),
+  identifier: 12345678,
+  tax_identifier: 87654321,
+  phone: '+1234567890',
   password: 'password123'
 }
 
@@ -29,15 +32,28 @@ beforeAll(async () => {
   // Clean existing test data
   await UserModel.deleteMany({ email: testUser.email })
   await CartModel.deleteMany({})
-  await ProductModel.deleteMany({ name: 'Test Product' })
+  await ProductModel.deleteMany({ title: 'Test Product' })
 
   // Create a test product in the database
   testProduct = await ProductModel.create({
-    name: 'Test Product',
+    slug: 'test-product-cart',
+    title: 'Test Product',
     description: 'Test product description',
-    price: 99.99,
+    brand: 'Test Brand',
+    model: 'Test Model',
+    origin: 'Test Origin',
+    price: {
+      price: 99.99,
+      iva: 21,
+      isOffer: false
+    },
+    imagePath: ['test-image.jpg'],
+    thumbnail: 'test-thumbnail.jpg',
+    code: 'TEST001',
     stock: 50,
-    category: 'test'
+    category: 'other',
+    active: true,
+    isActive: true
   })
 
   // Register a test user
@@ -50,9 +66,15 @@ beforeAll(async () => {
 
 // Disconnect from database after all tests
 afterAll(async () => {
-  // Clean up created test data
-  await UserModel.deleteMany({ email: testUser.email })
-  await ProductModel.deleteMany({ _id: testProduct._id })
+  // Clean up created test data before closing connection
+  try {
+    await UserModel.deleteMany({ email: testUser.email })
+    if (testProduct && testProduct._id) {
+      await ProductModel.deleteMany({ _id: testProduct._id })
+    }
+  } catch (error) {
+    console.log('Error cleaning up test data:', error.message)
+  }
   await closeTestDB()
 }, 60000) // Incrementar timeout a 60 segundos
 
@@ -63,12 +85,12 @@ describe('Cart API', () => {
       .set('Authorization', `Bearer ${userToken}`)
       .expect(201)
 
-    expect(response.body).toHaveProperty('_id')
+    expect(response.body).toHaveProperty('id')
     expect(response.body).toHaveProperty('products')
     expect(Array.isArray(response.body.products)).toBe(true)
     expect(response.body.products.length).toBe(0)
 
-    cartId = response.body._id
+    cartId = response.body.id
   })
 
   test('should get cart by ID', async () => {
@@ -77,7 +99,7 @@ describe('Cart API', () => {
       .set('Authorization', `Bearer ${userToken}`)
       .expect(200)
 
-    expect(response.body).toHaveProperty('_id', cartId)
+    expect(response.body).toHaveProperty('id', cartId)
     expect(Array.isArray(response.body.products)).toBe(true)
   })
 
@@ -88,7 +110,7 @@ describe('Cart API', () => {
       .send({ quantity: 2 })
       .expect(200)
 
-    expect(response.body).toHaveProperty('_id', cartId)
+    expect(response.body).toHaveProperty('id', cartId)
     expect(response.body.products.length).toBe(1)
     expect(response.body.products[0].quantity).toBe(2)
     expect(response.body.products[0].product.toString()).toBe(testProduct._id.toString())
@@ -101,7 +123,7 @@ describe('Cart API', () => {
       .send({ quantity: 5 })
       .expect(200)
 
-    expect(response.body).toHaveProperty('_id', cartId)
+    expect(response.body).toHaveProperty('id', cartId)
     expect(response.body.products.length).toBe(1)
     expect(response.body.products[0].quantity).toBe(5)
   })
@@ -112,7 +134,7 @@ describe('Cart API', () => {
       .set('Authorization', `Bearer ${userToken}`)
       .expect(200)
 
-    expect(response.body).toHaveProperty('_id', cartId)
+    expect(response.body).toHaveProperty('id', cartId)
     expect(response.body.products.length).toBe(0)
   })
 

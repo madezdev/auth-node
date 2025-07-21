@@ -11,11 +11,14 @@ POST {{baseUrl}}/api/sessions/register
 Content-Type: application/json
 
 {
-  "first_name": "Miguel",
+  "first_name": "Martin",
   "last_name": "Hernandez",
-  "email": "mh@example.com",
-  "age": 30,
-  "password": "password123"
+  "email": "madezdev@gmail.com",
+  "birthday": "1983-09-14",
+  "identifier": "30496204",
+  "tax_identifier": "20304962047",
+  "phone": "1133266874",
+  "password": "Pepe@1234"
 }
 
 ### Inicio de sesión
@@ -24,8 +27,8 @@ POST {{baseUrl}}/api/sessions/login
 Content-Type: application/json
 
 {
-  "email": "john.doe@example.com",
-  "password": "password123"
+  "email": "madezdev@gmail.com",
+  "password": "Pepe@1234"
 }
 
 ### Crear usuario administrador (requiere autenticación como admin en producción)

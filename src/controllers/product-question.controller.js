@@ -1,4 +1,4 @@
-import logger from '../config/logger.js'
+import logger from '../config/logger.config.js'
 import { ProductQuestionDao } from '../daos/product-question.dao.js'
 import { createProductQuestionDTO, createProductQuestionsDTO } from '../dtos/product-question.dto.js'
 

@@ -12,15 +12,20 @@ import { describe, test, expect, beforeAll, afterAll } from '@jest/globals'
 let adminToken = ''
 let testProductId = ''
 const testProduct = {
-  name: 'Test Product',
+  title: 'Test Product',
+  slug: 'test-product',
   description: 'This is a test product',
-  price: 999,
+  brand: 'Test Brand',
+  model: 'Test Model',
+  origin: 'Test Origin',
+  price: { price: 999, iva: 21, isOffer: false },
+  imagePath: ['test-image.jpg'],
   stock: 50,
-  category: 'test'
+  category: 'other'
 }
 const updatedProduct = {
   description: 'Updated description',
-  price: 1299,
+  price: { price: 1299, iva: 21, isOffer: false },
   stock: 75
 }
 
@@ -37,7 +42,10 @@ beforeAll(async () => {
     first_name: 'Admin',
     last_name: 'User',
     email: 'admin@test.com',
-    age: 30,
+    birthday: new Date('1990-01-01'),
+    identifier: 12345678,
+    tax_identifier: 87654321,
+    phone: '+1234567890',
     password: 'testpassword',
     role: 'admin'
   })
@@ -68,11 +76,11 @@ describe('Product API Tests', () => {
       expect(response.status).toBe(201)
       expect(response.body.status).toBe('success')
       expect(response.body.message).toBe('Producto creado exitosamente')
-      expect(response.body.product).toHaveProperty('_id')
-      expect(response.body.product.name).toBe(testProduct.name)
+      expect(response.body.product).toHaveProperty('id')
+      expect(response.body.product.title).toBe(testProduct.title)
 
       // Guardar ID para pruebas posteriores
-      testProductId = response.body.product._id
+      testProductId = response.body.product.id
     }, 30000)
 
     test('should return 401 when not authenticated', async () => {
@@ -132,10 +140,15 @@ describe('Product API Tests', () => {
     test('should filter products by category', async () => {
       // Crear un producto con categoría específica para el test
       await ProductModel.create({
-        name: 'Category Test Product',
+        title: 'Category Test Product',
+        slug: 'category-test-product',
         description: 'Product for category testing',
-        price: 500,
-        stock: 10,
+        brand: 'Test Brand',
+        model: 'Test Model',
+        origin: 'Test Origin',
+        price: { price: 1500, iva: 21, isOffer: false },
+        imagePath: ['test-image.jpg'],
+        stock: 25,
         category: 'special_category'
       })
 
@@ -157,10 +170,15 @@ describe('Product API Tests', () => {
       const productsToCreate = []
       for (let i = 0; i < 15; i++) {
         productsToCreate.push({
-          name: `Pagination Product ${i}`,
-          description: 'Product for pagination testing',
-          price: 100 + i,
-          stock: 5,
+          title: `Pagination Product ${i}`,
+          slug: `pagination-product-${i}`,
+          description: `Pagination test product ${i}`,
+          brand: 'Test Brand',
+          model: 'Test Model',
+          origin: 'Test Origin',
+          price: { price: 100 + i, iva: 21, isOffer: false },
+          imagePath: ['test-image.jpg'],
+          stock: 10 + i,
           category: 'pagination'
         })
       }
@@ -185,9 +203,9 @@ describe('Product API Tests', () => {
           .set('Authorization', `Bearer ${adminToken}`)
           .send(testProduct)
 
-        testProductId = createResponse.body.product._id
+        testProductId = createResponse.body.product.id
       }
-      
+
       const response = await request(app)
         .get(`/api/products/${testProductId}`)
 
@@ -227,9 +245,9 @@ describe('Product API Tests', () => {
           .set('Authorization', `Bearer ${adminToken}`)
           .send(testProduct)
 
-        testProductId = createResponse.body.product._id
+        testProductId = createResponse.body.product.id
       }
-      
+
       const response = await request(app)
         .put(`/api/products/${testProductId}`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -253,7 +271,7 @@ describe('Product API Tests', () => {
 
         testProductId = createResponse.body.product._id
       }
-      
+
       const response = await request(app)
         .put(`/api/products/${testProductId}`)
         .send(updatedProduct)
@@ -279,15 +297,20 @@ describe('Product API Tests', () => {
     test('should delete a product when authenticated as admin', async () => {
       // Crear un producto específicamente para eliminar
       const productToDelete = await ProductModel.create({
-        name: 'Product to be deleted',
+        title: 'Product to be deleted',
+        slug: 'product-to-be-deleted',
         description: 'This product will be deleted in the test',
-        price: 1000,
+        brand: 'Test Brand',
+        model: 'Test Model',
+        origin: 'Test Origin',
+        price: { price: 1000, iva: 21, isOffer: false },
+        imagePath: ['test-image.jpg'],
         stock: 20,
-        category: 'test'
+        category: 'other'
       })
-      
+
       const deleteId = productToDelete._id.toString()
-      
+
       const response = await request(app)
         .delete(`/api/products/${deleteId}`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -304,11 +327,16 @@ describe('Product API Tests', () => {
     test('should return 401 when not authenticated', async () => {
       // Crear un nuevo producto para la prueba
       const newProduct = await ProductModel.create({
-        name: 'Product for auth test',
+        title: 'Product for auth test',
+        slug: 'product-for-auth-test',
         description: 'This product is for testing authentication',
-        price: 500,
+        brand: 'Test Brand',
+        model: 'Test Model',
+        origin: 'Test Origin',
+        price: { price: 500, iva: 21, isOffer: false },
+        imagePath: ['test-image.jpg'],
         stock: 10,
-        category: 'test'
+        category: 'other'
       })
 
       const response = await request(app)

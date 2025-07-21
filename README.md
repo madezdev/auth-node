@@ -241,6 +241,18 @@ Se ha implementado un sistema de logging avanzado utilizando Winston para mejora
    - Datos técnicos: Stack trace para errores
    - Información de entorno: Identificación de modo test/desarrollo/producción
 
+6. **Test de integración**:
+   - Test de integración para verificar que los componentes funcionen correctamente juntos
+   - Test de integración para verificar que los componentes funcionen correctamente juntos
+   - npm test -- tests/user.test.js
+   - npm test -- tests/order.test.js
+   - npm test -- tests/shipping-address-integration.test.js
+   - npm test -- tests/order-address-integration.test.js
+   - npm test -- tests/order-address-integration.test.js -t "should create order with default shipping address"
+   - Ejecutar un test específico dentro de un archivo: npm test -- -t "should create a new user"
+   - Ejecutar tests que coincidan con un patrón: npm test -- -t "create"
+   - Ver resultados con más detalle (verboso): npm test -- --verbose
+
 ### Beneficios
 
 - **Trazabilidad**: Seguimiento completo del flujo de autenticación y autorización

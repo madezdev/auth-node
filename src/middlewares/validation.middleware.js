@@ -6,15 +6,18 @@ import logger from '../config/logger.config.js'
  */
 /* eslint-disable camelcase */
 export const validateRegistration = (req, res, next) => {
-  const { first_name, last_name, email, age, password } = req.body
+  const { first_name, last_name, email, birthday, identifier, tax_identifier, phone, password } = req.body
 
   // Check required fields
-  if (!first_name || !last_name || !email || !age || !password) {
+  if (!first_name || !last_name || !email || !birthday || !identifier || !tax_identifier || !phone || !password) {
     logger.warn(`Validation failed: Missing required fields - ${JSON.stringify({
       first_name: !!first_name,
       last_name: !!last_name,
       email: !!email,
-      age: !!age,
+      birthday: !!birthday,
+      identifier: !!identifier,
+      tax_identifier: !!tax_identifier,
+      phone: !!phone,
       password: !!password
     })}`)
     return res.status(400).json({
@@ -35,12 +38,21 @@ export const validateRegistration = (req, res, next) => {
     })
   }
 
-  // Age validation
-  if (isNaN(age) || age < 18) {
-    logger.warn(`Validation failed: Invalid age - ${age}`)
+  // Birthday validation (must be at least 18 years old)
+  const birthDate = new Date(birthday)
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+
+  if (isNaN(birthDate.getTime()) || age < 18) {
+    logger.warn(`Validation failed: Invalid birthday or age under 18 - ${birthday}`)
     return res.status(400).json({
       status: 'error',
-      message: 'Age must be a number and at least 18'
+      message: 'Must be at least 18 years old'
     })
   }
 

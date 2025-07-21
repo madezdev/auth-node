@@ -48,6 +48,16 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Cart'
   },
+  // Referencia a las direcciones de envío del usuario
+  shipping_addresses: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ShippingAddress'
+  }],
+  // Dirección de envío por defecto
+  default_shipping_address: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ShippingAddress'
+  },
   role: {
     type: String,
     default: 'user',
